@@ -3,9 +3,11 @@ freak
 
 Functional reactive object wrapper
 
-```js
-
+<!-- js
 var freak = require('./freak.js');
+-->
+
+```js
 
 var obj = {
   a: 1,
@@ -49,6 +51,12 @@ model('f'); // => 4
 
 // Get child context property
 model('obj')('x'); // => 42
+
+// Get array element
+model('arr')(0); // => 1
+
+// Raw values
+model('arr').values; // => [1, 2, 3]
 
 // Arrays can mutate
 // model('arr').splice(1, 1);

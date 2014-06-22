@@ -13,22 +13,18 @@ function freak(obj, root, parent) {
   }
 
   // Functional accessor
-  function accessor(prop, arg, transformer, signal) {
+  function accessor(prop, arg, refresh) {
 
     var i, len, result, val;
 
     var dependents = this.dependents[prop] || [];
     var watchers = this.watchers[prop] || [];
 
-    var formatter = transformer || identity;
-
     var getter = function(prop) {
       var result = this.values[prop];
-      return formatter(
-        typeof result === 'function' ?
-          result.call(getter) : 
-          result
-      );
+      return typeof result === 'function' ?
+        result.call(getter) : 
+        result
     };
 
     var dependencyTracker = function(propToReturn) {
@@ -43,7 +39,7 @@ function freak(obj, root, parent) {
     };
 
     // Getter?
-    if ((arg === undefined || typeof arg === 'function') && !signal) {
+    if ((arg === undefined || typeof arg === 'function') && !refresh) {
 
       // Parent context?
       if (prop === '..') {
@@ -63,27 +59,19 @@ function freak(obj, root, parent) {
           // Static property (leaf in the dependency tree)
           val;
 
-      return Array.isArray(result) ?
-        // Collection
-        typeof transformer === 'function' ?
-          // Transformer provided, map, then filter not defined values
-          result.map(transformer).filter(isDefined) :
-          // No transformer
-          result :
+      return typeof result === 'object' ?
+        // Child context
+        freak(val) :
 
-        typeof result === 'object' ?
-          // Child context
-          freak(val) :
-
-          // Single value
-          formatter(result);
+        // Single value
+        result;
 
     }
 
     else {
 
       // Setter?
-      if (!signal) {
+      if (!refresh) {
         if (typeof this.values[prop] === 'function') {
           // Computed property setter
           this.values[prop].call(dependencyTracker.bind(this), arg);
@@ -96,7 +84,7 @@ function freak(obj, root, parent) {
 
       // Notify dependents
       for (i = 0, len = dependents.length; i < len; i++) {
-        accessor.call(this, dependents[i], arg, null, 'refresh');
+        accessor.call(this, dependents[i], arg, true);
       }
 
       // Notify watchers
@@ -106,8 +94,7 @@ function freak(obj, root, parent) {
 
     } // if getter        
 
-  } // accessor
-
+  } // end accessor
 
   // Accessor context
   var context = {
@@ -121,7 +108,11 @@ function freak(obj, root, parent) {
     parent: parent || null
   };
 
-  return accessor.bind(context);
+  // Accessor instance
+  var acc = accessor.bind(context);
+  acc.values = obj;
+
+  return acc;
 }
 
 // CommonJS export
