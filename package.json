@@ -2,7 +2,7 @@
   "name": "freak",
   "version": "0.0.0",
   "description": "Functional reactive object wrapper",
-  "main": "index.js",
+  "main": "freak.js",
   "scripts": {
     "test": "./node_modules/.bin/jsmd README.md"
   },

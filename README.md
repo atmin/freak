@@ -5,7 +5,7 @@ Functional reactive object wrapper
 
 ```js
 
-var freak = require('freak');
+var freak = require('./freak.js');
 
 var obj = {
   a: 1,
@@ -31,9 +31,9 @@ var model = freak(obj);
 typeof model; // => 'function'
 
 // Log changes of `f` property
-model.watch('f', function() {
-  console.log('f has changed and is now ' + this('f'));
-});
+// model.watch('f', function() {
+//   console.log('f has changed and is now ' + this('f'));
+// });
 
 // Get property
 model('a'); // => 1
@@ -51,10 +51,10 @@ model('f'); // => 4
 model('obj')('x'); // => 42
 
 // Arrays can mutate
-model('arr').splice(1, 1);
+// model('arr').splice(1, 1);
 // And we can see raw values
-model('arr').values; // => [1, 3]
+// model('arr').values; // => [1, 3]
 
 // Computed properties work for arrays, too
-model('sum'); // => 4
+// model('sum'); // => 4
 ```
