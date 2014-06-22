@@ -1,4 +1,4 @@
-freak
+Freak
 =====
 
 Functional reactive object wrapper
@@ -59,9 +59,11 @@ model('arr')(0); // => 1
 model('arr').values; // => [1, 2, 3]
 
 // Arrays can mutate
-// model('arr').splice(1, 1);
-// And we can see raw values
-// model('arr').values; // => [1, 3]
+model('arr').splice(1, 1);
+model('arr').values; // => [1, 3]
+
+// Array length is the `len` property
+model('arr').len; // => 2
 
 // Computed properties work for arrays, too
 // model('sum'); // => 4
