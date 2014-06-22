@@ -1,0 +1,28 @@
+{
+  "name": "freak",
+  "version": "0.0.0",
+  "description": "Functional reactive object wrapper",
+  "main": "index.js",
+  "scripts": {
+    "test": "./node_modules/.bin/jsmd README.md"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/atmin/freak.git"
+  },
+  "keywords": [
+    "functional",
+    "reactive",
+    "object",
+    "wrapper"
+  ],
+  "author": "Atanas Minev",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/atmin/freak/issues"
+  },
+  "homepage": "https://github.com/atmin/freak",
+  "devDependencies": {
+    "jsmd": "^0.3.0"
+  }
+}
