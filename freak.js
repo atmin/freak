@@ -98,8 +98,7 @@ function freak(obj, root, parent) {
   // trigger('insert' or 'delete', index, count)
   function trigger(event, a, b) {
     var listeners =
-      ( this &&
-        this.listeners &&
+      ( this.listeners &&
         this.listeners[event] && 
         this.listeners[event][event === 'update' ? a : null]
       ) || [];
@@ -205,7 +204,9 @@ function freak(obj, root, parent) {
     on: on.bind(context),
         
     // .off(event[, prop][, callback])
-    off: off.bind(context)
+    off: off.bind(context),
+
+    trigger: trigger.bind(context)
 
   }; // end instance
 
@@ -217,43 +218,43 @@ function freak(obj, root, parent) {
     pop: function() {
       var result = this.values.pop();
       this.len = this.values.length;
-      trigger('delete', this.len, 1);
+      this.trigger('delete', this.len, 1);
       return result;
     },
 
     push: function() {
       var result = [].push.apply(this.values, arguments);
       this.len = this.values.length;
-      trigger('insert', this.len - 1, 1);
+      this.trigger('insert', this.len - 1, 1);
       return result;
     },
 
     reverse: function() {
       var result = this.values.reverse();
       this.len = this.values.length;
-      trigger('delete', 0, this.len);
-      trigger('insert', 0, this.len);
+      this.trigger('delete', 0, this.len);
+      this.trigger('insert', 0, this.len);
       return result;
     },
 
     shift: function() {
       var result = this.values.shift();
       this.len = this.values.length;
-      trigger('delete', 0, 1);
+      this.trigger('delete', 0, 1);
       return result;
     },
 
     unshift: function() {
       var result = [].unshift.apply(this.values, arguments);
       this.len = this.values.length;
-      trigger('insert', 0, 1);
+      this.trigger('insert', 0, 1);
       return result;
     },
 
     sort: function() {
       var result = [].sort.apply(this.values, arguments);
-      trigger('delete', 0, this.length);
-      trigger('insert', 0, this.length);
+      this.trigger('delete', 0, this.length);
+      this.trigger('insert', 0, this.length);
       return result;
     },
 
@@ -261,10 +262,10 @@ function freak(obj, root, parent) {
       var result = [].splice.apply(this.values, arguments);
       this.len = this.values.length;
       if (arguments[1]) {
-        trigger('delete', arguments[0], arguments[1]);
+        this.trigger('delete', arguments[0], arguments[1]);
       }
       if (arguments.length > 2) {
-        trigger('insert', arguments[0], arguments.length - 2);
+        this.trigger('insert', arguments[0], arguments.length - 2);
       }
       return result;
     }
