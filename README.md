@@ -3,7 +3,7 @@ Freak
 
 Functional reactive object wrapper
 
-(jtmpl)[https://github.com/atmin/jtmpl] data model.
+[jtmpl](https://github.com/atmin/jtmpl) data model.
 
 <!-- js
 var freak = require('./freak.js');
