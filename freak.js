@@ -2,10 +2,38 @@
 
 function freak(obj, root, parent) {
 
-  // Collect child accessors
-  var children = {};
-  var i, len;
+  /*
+  * memoize.js
+  * by @philogb and @addyosmani
+  * with further optimizations by @mathias
+  * and @DmitryBaranovsk
+  * perf tests: http://bit.ly/q3zpG3
+  * Released under an MIT license.
+  */
+  function memoize( fn ) {
+    return function () {
+      var args = Array.prototype.slice.call(arguments),
+        hash = "",
+        i = args.length,
+        currentArg = null;
+      while (i--) {
+        currentArg = args[i];
+        hash += (currentArg === Object(currentArg)) ? 
+        JSON.stringify(currentArg) : currentArg;
+        fn.memoize || (fn.memoize = {});
+      }
+      return (hash in fn.memoize) ? fn.memoize[hash] : 
+      fn.memoize[hash] = fn.apply(this, args);
+    };
+  }
 
+  function assert(cond, msg) {
+    if (!cond) {
+      throw msg || 'assertion failed';
+    }
+  }
+
+  // Mix properties into target
   function mixin(target, properties) {
     for (var i = 0, props = Object.getOwnPropertyNames(properties), len = props.length;
         i < len; i++) {
@@ -13,13 +41,83 @@ function freak(obj, root, parent) {
     }
   }
 
+  // Event functions
+  function on() {
+    var event = arguments[0];
+    var prop = typeof arguments[1] === 'string' ? arguments[1] : null;
+    var callback = 
+      typeof arguments[1] === 'function' ?
+        arguments[1] :
+        typeof arguments[2] === 'function' ?
+          arguments[2] : null;
+
+    // Args check
+    assert(['update', 'insert', 'delete'].indexOf(event) > -1);
+    assert(
+      (event === 'update' && prop) ||
+      ((event === 'insert' || event === 'delete') && !prop)
+    );
+
+    // Init listeners
+    if (!this.listeners[event][prop]) {
+      this.listeners[event][prop] = [];
+    }
+    // Already registered?
+    if (this.listeners[event][prop].indexOf(callback) === -1) {
+      this.listeners[event][prop].push(callback);
+    }
+  }
+
+  function off() {
+    var event = arguments[0];
+    var prop = typeof arguments[1] === 'string' ? arguments[1] : null;
+    var callback = 
+      typeof arguments[1] === 'function' ?
+        arguments[1] :
+        typeof arguments[2] === 'function' ?
+          arguments[2] : null;
+    var i;
+
+    if (!this.listeners[event][prop]) return;
+
+    // Remove all property watchers?
+    if (!callback) {
+      this.listeners[event][prop] = [];
+    }
+    else {
+      // Remove specific callback
+      i = this.listeners[event][prop].indexOf(callback);
+      if (i > -1) {
+        this.listeners[event][prop].splice(i, 1);
+      }
+    }
+
+  }  
+
+  // trigger('update', prop)
+  // trigger('insert' or 'delete', index, count)
+  function trigger(event, a, b) {
+    var listeners =
+      ( this &&
+        this.listeners &&
+        this.listeners[event] && 
+        this.listeners[event][event === 'update' ? a : null]
+      ) || [];
+
+    listeners.map(function(listener) {
+      if (event === 'update') {
+        listener.call(bound);
+      }
+      else {
+        listener.call(bound, a, b);
+      }
+    });
+  }
+
   // Functional accessor
   function accessor(prop, arg, refresh) {
 
-    var i, len, result, val;
-
-    var dependents = this.dependents[prop] || [];
-    var watchers = this.watchers[prop] || [];
+    var i, len, dependents, result, val;
 
     var getter = function(prop) {
       var result = this.values[prop];
@@ -42,16 +140,6 @@ function freak(obj, root, parent) {
     // Getter?
     if ((arg === undefined || typeof arg === 'function') && !refresh) {
 
-      // Parent context?
-      if (prop === '..') {
-        return this.parent;
-      }
-
-      // Root context?
-      if (prop === '/') {
-        return this.root;
-      }
-
       val = this.values[prop];
 
       result = (typeof val === 'function') ?
@@ -60,7 +148,7 @@ function freak(obj, root, parent) {
         // Static property (leaf in the dependency tree)
         val;
 
-      return typeof result === 'object' ? freak(val) : result;
+      return typeof result === 'object' ? memoize(freak)(val) : result;
     }
 
     // Setter
@@ -78,14 +166,13 @@ function freak(obj, root, parent) {
       }
 
       // Notify dependents
-      for (i = 0, len = dependents.length; i < len; i++) {
+      for (i = 0, dependents = this.dependents[prop] || [], len = dependents.length;
+          i < len; i++) {
         accessor.call(this, dependents[i], arg, true);
       }
 
-      // Notify watchers
-      for (i = 0, len = watchers.length; i < len; i++) {
-        watchers[i](arg);
-      }
+      // Emit update event
+      trigger.call(this, 'update', prop);
 
     } // if getter        
 
@@ -94,63 +181,33 @@ function freak(obj, root, parent) {
   parent = parent || null;
   root = root || obj;
 
-  // Accessor context
+  // Accessor context (private variables)
   var context = {
-    children: {},
     accessors: {},
     dependents: {},
-    watchers: {},
-    arrayWatchers: [],
+    listeners: {
+      'update': {},
+      'insert': {},
+      'delete': {}
+    },
     values: obj,
     root: root,
     parent: parent
   };
 
-  // Accessor instance
+  // Accessor instance (public interface)
   var instance = {
     values: obj,
     parent: parent,
     root: root,
 
-    watch: function(prop, callback) {
-      // Init watchers
-      if (!this.watchers[prop]) {
-        this.watchers[prop] = [];
-      }
-      // Already registered?
-      if (this.watchers[prop].indexOf(callback) === -1) {
-        this.watchers[prop].push(callback);
-      }
-    }.bind(context),
-
-    unwatch: function(prop, callback) {
-      var i;
-
-      if (!this.watchers[prop]) return;
-
-      // Remove all property watchers?
-      if (!callback) {
-        this.watchers[prop] = [];
-      }
-      else {
-        // Remove specific callback
-        i = this.watchers[prop].indexOf(callback);
-        if (i > -1) {
-          this.watchers.splice(i, 1);
-        }
-      }
-
-    }.bind(context),
-
-    watchArray: function(callback) {
-
-    }
+    // .on(event[, prop], callback)
+    on: on.bind(context),
         
-  };
+    // .off(event[, prop][, callback])
+    off: off.bind(context)
 
-  var notify = function() {
-
-  };
+  }; // end instance
 
   // Array properties
   var array = {
@@ -160,43 +217,43 @@ function freak(obj, root, parent) {
     pop: function() {
       var result = this.values.pop();
       this.len = this.values.length;
-      notify('del', this.len, 1);
+      trigger('delete', this.len, 1);
       return result;
     },
 
     push: function() {
       var result = [].push.apply(this.values, arguments);
       this.len = this.values.length;
-      notify('ins', this.len - 1, 1);
+      trigger('insert', this.len - 1, 1);
       return result;
     },
 
     reverse: function() {
       var result = this.values.reverse();
       this.len = this.values.length;
-      notify('del', 0, this.len);
-      notify('ins', 0, this.len);
+      trigger('delete', 0, this.len);
+      trigger('insert', 0, this.len);
       return result;
     },
 
     shift: function() {
       var result = this.values.shift();
       this.len = this.values.length;
-      notify('del', 0, 1);
+      trigger('delete', 0, 1);
       return result;
     },
 
     unshift: function() {
       var result = [].unshift.apply(this.values, arguments);
       this.len = this.values.length;
-      notify('ins', 0, 1);
+      trigger('insert', 0, 1);
       return result;
     },
 
     sort: function() {
       var result = [].sort.apply(this.values, arguments);
-      notify('del', 0, this.length);
-      notify('ins', 0, this.length);
+      trigger('delete', 0, this.length);
+      trigger('insert', 0, this.length);
       return result;
     },
 
@@ -204,10 +261,10 @@ function freak(obj, root, parent) {
       var result = [].splice.apply(this.values, arguments);
       this.len = this.values.length;
       if (arguments[1]) {
-        notify('del', arguments[0], arguments[1]);
+        trigger('delete', arguments[0], arguments[1]);
       }
       if (arguments.length > 2) {
-        notify('ins', arguments[0], arguments.length - 2);
+        trigger('insert', arguments[0], arguments.length - 2);
       }
       return result;
     }
