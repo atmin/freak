@@ -3,6 +3,8 @@ Freak
 
 Functional reactive object wrapper
 
+(jtmpl)[https://github.com/atmin/jtmpl] data model.
+
 <!-- js
 var freak = require('./freak.js');
 -->
@@ -71,10 +73,8 @@ model('f'); // => 3
 // Set property
 model('a', 2);
 
-// 'f' update event should fire
+// 'f' update event fires
 log[0]; // => 'f = 4'
-
-// Get computed property
 model('f'); // => 4
 
 // Get child context property
@@ -86,9 +86,13 @@ model('arr')(0); // => 1
 // Raw values
 model('arr').values; // => [1, 2, 3]
 
+// Computed properties work for arrays, too
+model('sum'); // => 6
+
 // Arrays can mutate
 model('arr').splice(1, 1);
 model('arr').values; // => [1, 3]
+model('sum'); // => 4
 
 // And we are notified when elements are deleted or inserted
 log[0]; // => '1 element(s) deleted from 1'
@@ -96,8 +100,7 @@ log[0]; // => '1 element(s) deleted from 1'
 // Array length is the `len` property
 model('arr').len; // => 2
 
-// Computed properties work for arrays, too
-// model('sum'); // => 4
+// Check this page source to see the other boring test cases :)
 ```
 
 
