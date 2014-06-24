@@ -50,7 +50,7 @@ typeof model; // => 'function'
 var log = [];
 
 // Track property change
-model.on('update', 'f', function() {
+model.on('change', 'f', function() {
   log.unshift('f = ' + this('f'));
 });
 
@@ -73,7 +73,7 @@ model('f'); // => 3
 // Set property
 model('a', 2);
 
-// 'f' update event fires
+// 'f' change event fires
 log[0]; // => 'f = 4'
 model('f'); // => 4
 
@@ -92,22 +92,42 @@ model('sum'); // => 6
 // Arrays can mutate
 model('arr').splice(1, 1);
 model('arr').values; // => [1, 3]
+log[0]; // => '1 element(s) deleted from 1'
 model('sum'); // => 4
 
-// And we are notified when elements are deleted or inserted
-log[0]; // => '1 element(s) deleted from 1'
-
-// Array length is the `len` property
+// Array length is the `len` property, because Function.length already exists
 model('arr').len; // => 2
 
-// Check this page source to see the other boring test cases :)
-```
 
 
-<!-- js
 
-// Invisible tests
+
+// More tests
+
 model('arr').push(42);
-// log[0]; // => ''
+model('arr').values; // => [1, 3, 42]
+log[0]; // => '1 element(s) inserted at 2'
 
--->
+model('arr').pop();
+model('arr').values; // => [1, 3]
+log[0]; // => '1 element(s) deleted from 2'
+
+model('arr').reverse();
+model('arr').values; // => [3, 1]
+log[1]; // => '2 element(s) deleted from 0'
+log[0]; // => '2 element(s) inserted at 0'
+
+model('arr').shift();
+model('arr').values; // => [1]
+log[0]; // => '1 element(s) deleted from 0'
+
+model('arr').unshift(42);
+model('arr').values; // => [42, 1]
+log[0]; // => '1 element(s) inserted at 0'
+
+model('arr').sort();
+model('arr').values; // => [1, 42]
+log[1]; // => '2 element(s) deleted from 0'
+log[0]; // => '2 element(s) inserted at 0'
+
+```

@@ -2,30 +2,16 @@
 
 function freak(obj, root, parent) {
 
-  /*
-  * memoize.js
-  * by @philogb and @addyosmani
-  * with further optimizations by @mathias
-  * and @DmitryBaranovsk
-  * perf tests: http://bit.ly/q3zpG3
-  * Released under an MIT license.
-  */
-  function memoize( fn ) {
-    return function () {
-      var args = Array.prototype.slice.call(arguments),
-        hash = "",
-        i = args.length,
-        currentArg = null;
-      while (i--) {
-        currentArg = args[i];
-        hash += (currentArg === Object(currentArg)) ? 
-        JSON.stringify(currentArg) : currentArg;
-        fn.memoize || (fn.memoize = {});
-      }
-      return (hash in fn.memoize) ? fn.memoize[hash] : 
-      fn.memoize[hash] = fn.apply(this, args);
-    };
-  }
+  var listeners = {
+    'change': {},
+    'insert': {},
+    'delete': {}
+  };
+  var dependents = {};
+  var children = {};
+
+  parent = parent || null;
+  root = root || obj;
 
   function assert(cond, msg) {
     if (!cond) {
@@ -52,19 +38,19 @@ function freak(obj, root, parent) {
           arguments[2] : null;
 
     // Args check
-    assert(['update', 'insert', 'delete'].indexOf(event) > -1);
+    assert(['change', 'insert', 'delete'].indexOf(event) > -1);
     assert(
-      (event === 'update' && prop) ||
+      (event === 'change' && prop) ||
       ((event === 'insert' || event === 'delete') && !prop)
     );
 
-    // Init listeners
-    if (!this.listeners[event][prop]) {
-      this.listeners[event][prop] = [];
+    // Init listeners for prop
+    if (!listeners[event][prop]) {
+      listeners[event][prop] = [];
     }
     // Already registered?
-    if (this.listeners[event][prop].indexOf(callback) === -1) {
-      this.listeners[event][prop].push(callback);
+    if (listeners[event][prop].indexOf(callback) === -1) {
+      listeners[event][prop].push(callback);
     }
   }
 
@@ -78,48 +64,38 @@ function freak(obj, root, parent) {
           arguments[2] : null;
     var i;
 
-    if (!this.listeners[event][prop]) return;
+    if (!listeners[event][prop]) return;
 
     // Remove all property watchers?
     if (!callback) {
-      this.listeners[event][prop] = [];
+      listeners[event][prop] = [];
     }
     else {
       // Remove specific callback
-      i = this.listeners[event][prop].indexOf(callback);
+      i = listeners[event][prop].indexOf(callback);
       if (i > -1) {
-        this.listeners[event][prop].splice(i, 1);
+        listeners[event][prop].splice(i, 1);
       }
     }
 
   }  
 
-  // trigger('update', prop)
+  // trigger('change', prop)
   // trigger('insert' or 'delete', index, count)
   function trigger(event, a, b) {
-    var listeners =
-      ( this.listeners &&
-        this.listeners[event] && 
-        this.listeners[event][event === 'update' ? a : null]
-      ) || [];
-
-    listeners.map(function(listener) {
-      if (event === 'update') {
-        listener.call(bound);
-      }
-      else {
-        listener.call(bound, a, b);
-      }
-    });
+    (listeners[event][event === 'change' ? a : null] || [])
+      .map(function(listener) {
+        listener.call(instance, a, b);
+      });
   }
 
   // Functional accessor
   function accessor(prop, arg, refresh) {
 
-    var i, len, dependents, result, val;
+    var i, len, dep, result, val;
 
     var getter = function(prop) {
-      var result = this.values[prop];
+      var result = obj[prop];
       return typeof result === 'function' ?
         result.call(getter) : 
         result
@@ -127,19 +103,19 @@ function freak(obj, root, parent) {
 
     var dependencyTracker = function(propToReturn) {
       // Update dependency tree
-      if (!this.dependents[propToReturn]) {
-        this.dependents[propToReturn] = [];
+      if (!dependents[propToReturn]) {
+        dependents[propToReturn] = [];
       }
-      if (this.dependents[propToReturn].indexOf(prop) === -1) {
-        this.dependents[propToReturn].push(prop);
+      if (dependents[propToReturn].indexOf(prop) === -1) {
+        dependents[propToReturn].push(prop);
       }
-      return getter.call(this, propToReturn);
+      return getter(propToReturn);
     };
 
     // Getter?
     if ((arg === undefined || typeof arg === 'function') && !refresh) {
 
-      val = this.values[prop];
+      val = obj[prop];
 
       result = (typeof val === 'function') ?
         // Computed property
@@ -147,139 +123,124 @@ function freak(obj, root, parent) {
         // Static property (leaf in the dependency tree)
         val;
 
-      return typeof result === 'object' ? memoize(freak)(val) : result;
+      return typeof result === 'object' ? 
+
+        typeof children[prop] === 'function' ?
+          children[prop] :
+          children[prop] = freak(val, root, obj) :
+
+        result;
     }
 
-    // Setter
+    // Setterchildren[prop]
     else {
 
       if (!refresh) {
-        if (typeof this.values[prop] === 'function') {
+        if (typeof obj[prop] === 'function') {
           // Computed property setter
-          this.values[prop].call(dependencyTracker.bind(this), arg);
+          // TODO dependency tracker
+          obj[prop].call(dependencyTracker.bind(this), arg);
         }
         else {
           // Simple property. `arg` is the new value
-          this.values[prop] = arg;
+          obj[prop] = arg;
         }
       }
 
       // Notify dependents
-      for (i = 0, dependents = this.dependents[prop] || [], len = dependents.length;
+      for (i = 0, dep = dependents[prop] || [], len = dep.length;
           i < len; i++) {
-        accessor.call(this, dependents[i], arg, true);
+        accessor(dep[i], arg, true);
       }
 
       // Emit update event
-      trigger.call(this, 'update', prop);
+      trigger('change', prop);
 
     } // if getter        
 
   } // end accessor
 
-  parent = parent || null;
-  root = root || obj;
-
-  // Accessor context (private variables)
-  var context = {
-    accessors: {},
-    dependents: {},
-    listeners: {
-      'update': {},
-      'insert': {},
-      'delete': {}
-    },
-    values: obj,
-    root: root,
-    parent: parent
-  };
-
-  // Accessor instance (public interface)
-  var instance = {
+  var instanceProperties = {
     values: obj,
     parent: parent,
     root: root,
-
     // .on(event[, prop], callback)
-    on: on.bind(context),
-        
+    on: on,
     // .off(event[, prop][, callback])
-    off: off.bind(context),
+    off: off
+  };
 
-    trigger: trigger.bind(context)
-
-  }; // end instance
-
-  // Array properties
-  var array = {
+  var arrayProperties = {
     // Function prototype already contains length
     len: obj.length,
 
     pop: function() {
-      var result = this.values.pop();
+      var result = [].pop.apply(obj);
       this.len = this.values.length;
-      this.trigger('delete', this.len, 1);
+      trigger('delete', this.len, 1);
       return result;
     },
 
     push: function() {
-      var result = [].push.apply(this.values, arguments);
+      var result = [].push.apply(obj, arguments);
       this.len = this.values.length;
-      this.trigger('insert', this.len - 1, 1);
+      trigger('insert', this.len - 1, 1);
       return result;
     },
 
     reverse: function() {
-      var result = this.values.reverse();
-      this.len = this.values.length;
-      this.trigger('delete', 0, this.len);
-      this.trigger('insert', 0, this.len);
+      var result = [].reverse.apply(obj);
+      this.len = obj.length;
+      trigger('delete', 0, this.len);
+      trigger('insert', 0, this.len);
       return result;
     },
 
     shift: function() {
-      var result = this.values.shift();
-      this.len = this.values.length;
-      this.trigger('delete', 0, 1);
+      var result = [].shift.apply(obj);
+      this.len = obj.length;
+      trigger('delete', 0, 1);
       return result;
     },
 
     unshift: function() {
-      var result = [].unshift.apply(this.values, arguments);
-      this.len = this.values.length;
-      this.trigger('insert', 0, 1);
+      var result = [].unshift.apply(obj, arguments);
+      this.len = obj.length;
+      trigger('insert', 0, 1);
       return result;
     },
 
     sort: function() {
-      var result = [].sort.apply(this.values, arguments);
-      this.trigger('delete', 0, this.length);
-      this.trigger('insert', 0, this.length);
+      var result = [].sort.apply(obj, arguments);
+      trigger('delete', 0, this.len);
+      trigger('insert', 0, this.len);
       return result;
     },
 
     splice: function() {
-      var result = [].splice.apply(this.values, arguments);
-      this.len = this.values.length;
+      var result = [].splice.apply(obj, arguments);
+      this.len = obj.length;
       if (arguments[1]) {
-        this.trigger('delete', arguments[0], arguments[1]);
+        trigger('delete', arguments[0], arguments[1]);
       }
       if (arguments.length > 2) {
-        this.trigger('insert', arguments[0], arguments.length - 2);
+        trigger('insert', arguments[0], arguments.length - 2);
       }
       return result;
     }
 
   };
 
-  // Attach instance
-  var bound = accessor.bind(context);
-  mixin(bound, instance);
+  var instance = function() {
+    return accessor.apply(null, arguments);
+  };
+  mixin(instance, instanceProperties);
+
   if (Array.isArray(obj)) {
-    mixin(bound, array);
+    mixin(instance, arrayProperties);
   }
 
-  return bound;
+  return instance;
 }
 
 // CommonJS export
