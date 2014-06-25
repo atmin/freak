@@ -10,9 +10,6 @@ function freak(obj, root, parent) {
   var dependents = {};
   var children = {};
 
-  parent = parent || null;
-  root = root || obj;
-
   function assert(cond, msg) {
     if (!cond) {
       throw msg || 'assertion failed';
@@ -26,14 +23,6 @@ function freak(obj, root, parent) {
       target[props[i]] = properties[props[i]];
     }
   }
-
-  // Compose 2 functions
-  // function compose(f, g) {
-  //   var ctx = this;
-  //   return function() {
-  //     return f(g.apply(ctx, arguments));
-  //   };
-  // }
 
   // Event functions
   function on() {
@@ -128,12 +117,12 @@ function freak(obj, root, parent) {
 
         typeof children[prop] === 'function' ?
           children[prop] :
-          children[prop] = freak(val, root, obj) :
+          children[prop] = freak(val, root || instance, instance) :
 
         result;
     }
 
-    // Setterchildren[prop]
+    // Setter
     else {
 
       if (!refresh) {
@@ -159,16 +148,6 @@ function freak(obj, root, parent) {
     } // if getter        
 
   } // end accessor
-
-  var instanceProperties = {
-    values: obj,
-    parent: parent,
-    root: root,
-    // .on(event[, prop], callback)
-    on: on,
-    // .off(event[, prop][, callback])
-    off: off
-  };
 
   var arrayProperties = {
     // Function prototype already contains length
@@ -234,6 +213,17 @@ function freak(obj, root, parent) {
   var instance = function() {
     return accessor.apply(null, arguments);
   };
+
+  var instanceProperties = {
+    values: obj,
+    parent: parent || null,
+    root: root || instance,
+    // .on(event[, prop], callback)
+    on: on,
+    // .off(event[, prop][, callback])
+    off: off
+  };
+
   mixin(instance, instanceProperties);
 
   if (Array.isArray(obj)) {

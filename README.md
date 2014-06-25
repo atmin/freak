@@ -121,6 +121,12 @@ model('async', function(val) {
 model('setab', 10);
 model('f'); // => 20
 
+// You can access parent and root contexts of nested objects
+model('obj').parent === model; // => true
+model('arr').root === model; // => true
+model.root; // => model
+model.parent; // => null
+
 
 
 

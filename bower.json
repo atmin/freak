@@ -1,0 +1,28 @@
+{
+  "name": "freak",
+  "main": "freak.js",
+  "version": "0.0.3",
+  "homepage": "https://github.com/atmin/freak",
+  "authors": [
+    "Atanas Minev <fr33rider@gmail.com>"
+  ],
+  "description": "Functional reactive object wrapper",
+  "moduleType": [
+    "globals",
+    "node"
+  ],
+  "keywords": [
+    "functional",
+    "reactive",
+    "object",
+    "wrapper"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
