@@ -27,6 +27,14 @@ function freak(obj, root, parent) {
     }
   }
 
+  // Compose 2 functions
+  // function compose(f, g) {
+  //   var ctx = this;
+  //   return function() {
+  //     return f(g.apply(ctx, arguments));
+  //   };
+  // }
+
   // Event functions
   function on() {
     var event = arguments[0];
@@ -94,23 +102,16 @@ function freak(obj, root, parent) {
 
     var i, len, dep, result, val;
 
-    var getter = function(prop) {
-      var result = obj[prop];
-      return typeof result === 'function' ?
-        result.call(getter) : 
-        result
-    };
-
-    var dependencyTracker = function(propToReturn) {
-      // Update dependency tree
-      if (!dependents[propToReturn]) {
-        dependents[propToReturn] = [];
+    // Lift accessor, track dependencies
+    function dependencyTracker(_prop, _arg, _refresh) {
+      if (!dependents[_prop]) {
+        dependents[_prop] = [];
       }
-      if (dependents[propToReturn].indexOf(prop) === -1) {
-        dependents[propToReturn].push(prop);
+      if (dependents[_prop].indexOf(prop) === -1) {
+        dependents[_prop].push(prop);
       }
-      return getter(propToReturn);
-    };
+      return accessor(_prop, _arg, _refresh);
+    }
 
     // Getter?
     if ((arg === undefined || typeof arg === 'function') && !refresh) {
@@ -119,7 +120,7 @@ function freak(obj, root, parent) {
 
       result = (typeof val === 'function') ?
         // Computed property
-        val.call(dependencyTracker.bind(this)) :
+        val.call(dependencyTracker) :
         // Static property (leaf in the dependency tree)
         val;
 
@@ -138,8 +139,7 @@ function freak(obj, root, parent) {
       if (!refresh) {
         if (typeof obj[prop] === 'function') {
           // Computed property setter
-          // TODO dependency tracker
-          obj[prop].call(dependencyTracker.bind(this), arg);
+          obj[prop].call(dependencyTracker, arg);
         }
         else {
           // Simple property. `arg` is the new value
