@@ -33,9 +33,23 @@ var obj = {
 
   // Computed property, array aggregation
   sum: function() {
-    return this('arr').reduce(function(prev, curr) {
+    return this('arr').values.reduce(function(prev, curr) {
       return prev + curr;
     });
+  },
+
+  // Asynchronous computed propety
+  async: function(callback) {
+    setTimeout(function() {
+      var answer = 42;
+      callback(answer);
+    }, 0);
+  },
+
+  // Computed property setter
+  setab: function(val) {
+    this('a', val);
+    this('b', val);
   }
 
 };
@@ -97,6 +111,15 @@ model('sum'); // => 4
 
 // Array length is the `len` property, because Function.length already exists
 model('arr').len; // => 2
+
+// Get computed property asynchronously
+model('async', function(val) {
+  val; // => 42
+});
+
+// Computed propeties can be setters
+model('setab', 10);
+model('f'); // => 20
 
 
 

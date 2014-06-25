@@ -120,7 +120,7 @@ function freak(obj, root, parent) {
 
       result = (typeof val === 'function') ?
         // Computed property
-        val.call(dependencyTracker) :
+        val.call(dependencyTracker, arg) :
         // Static property (leaf in the dependency tree)
         val;
 
