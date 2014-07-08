@@ -27,7 +27,8 @@ function freak(obj, root, parent) {
   // Event functions
   function on() {
     var event = arguments[0];
-    var prop = typeof arguments[1] === 'string' ? arguments[1] : null;
+    var prop = ['string', 'number'].indexOf(typeof arguments[1]) > -1 ? 
+      arguments[1] : null;
     var callback = 
       typeof arguments[1] === 'function' ?
         arguments[1] :
@@ -37,7 +38,7 @@ function freak(obj, root, parent) {
     // Args check
     assert(['change', 'insert', 'delete'].indexOf(event) > -1);
     assert(
-      (event === 'change' && prop) ||
+      (event === 'change' && prop !== null) ||
       ((event === 'insert' || event === 'delete') && !prop)
     );
 

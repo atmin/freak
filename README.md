@@ -78,6 +78,11 @@ model('arr').on('delete', function(index, count) {
   log.unshift(count + ' element(s) deleted from ' + index);
 });
 
+// On first array element change
+model('arr').on('change', 0, function() {
+  log.unshift('arr[0] = ' + this(0));
+});
+
 // Get property
 model('a'); // => 1
 
@@ -132,6 +137,10 @@ model.parent; // => null
 
 
 // More tests
+
+// Set arr[0] to 1 again, change event should fire nonetheless
+model('arr')(0, 1);
+log[0]; // => 'arr[0] = 1'
 
 model('arr').push(42);
 model('arr').values; // => [1, 3, 42]
