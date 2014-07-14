@@ -136,7 +136,7 @@ model.parent; // => null
 
 
 
-// More tests
+// Mutating array methods tests
 
 // Set arr[0] to 1 again, change event should fire nonetheless
 model('arr')(0, 1);
@@ -167,5 +167,12 @@ model('arr').sort();
 model('arr').values; // => [1, 42]
 log[1]; // => '2 element(s) deleted from 0'
 log[0]; // => '2 element(s) inserted at 0'
+
+
+// More tests
+
+model = freak({a: [[1]]});
+model('a').unshift([2]);
+model('a').values[0] === model('a')(0).values; // => true
 
 ```

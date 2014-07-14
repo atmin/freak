@@ -171,6 +171,7 @@ function freak(obj, root, parent) {
     reverse: function() {
       var result = [].reverse.apply(obj);
       this.len = obj.length;
+      children = {};
       trigger('delete', 0, this.len);
       trigger('insert', 0, this.len);
       return result;
@@ -179,6 +180,7 @@ function freak(obj, root, parent) {
     shift: function() {
       var result = [].shift.apply(obj);
       this.len = obj.length;
+      children = {};
       trigger('delete', 0, 1);
       return result;
     },
@@ -186,12 +188,14 @@ function freak(obj, root, parent) {
     unshift: function() {
       var result = [].unshift.apply(obj, arguments);
       this.len = obj.length;
+      children = {};
       trigger('insert', 0, 1);
       return result;
     },
 
     sort: function() {
       var result = [].sort.apply(obj, arguments);
+      children = {};
       trigger('delete', 0, this.len);
       trigger('insert', 0, this.len);
       return result;
@@ -200,6 +204,7 @@ function freak(obj, root, parent) {
     splice: function() {
       var result = [].splice.apply(obj, arguments);
       this.len = obj.length;
+      children = {};
       if (arguments[1]) {
         trigger('delete', arguments[0], arguments[1]);
       }
