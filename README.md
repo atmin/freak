@@ -38,7 +38,7 @@ var obj = {
     });
   },
 
-  // Asynchronous computed propety
+  // Asynchronous computed property
   async: function(callback) {
     setTimeout(function() {
       var answer = 42;
@@ -122,7 +122,7 @@ model('async', function(val) {
   val; // => 42
 });
 
-// Computed propeties can be setters
+// Computed properties can be setters
 model('setab', 10);
 model('f'); // => 20
 
