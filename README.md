@@ -132,6 +132,14 @@ model('arr').root === model; // => true
 model.root; // => model
 model.parent; // => null
 
+// All contexts, but root have a property name, 'prop'
+// ('name' is existing read- function property name)
+model('obj').prop; // => 'obj'
+model('arr').prop; // => 'arr'
+model('obj').values === model('obj').parent(model('obj').prop).values; // => true
+model.prop; // => null
+
+
 
 
 

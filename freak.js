@@ -1,6 +1,6 @@
 'use strict';
 
-function freak(obj, root, parent) {
+function freak(obj, root, parent, prop) {
 
   var listeners = {
     'change': {},
@@ -118,7 +118,7 @@ function freak(obj, root, parent) {
 
         typeof children[prop] === 'function' ?
           children[prop] :
-          children[prop] = freak(val, root || instance, instance) :
+          children[prop] = freak(val, root || instance, instance, prop) :
 
         result;
     }
@@ -224,6 +224,7 @@ function freak(obj, root, parent) {
     values: obj,
     parent: parent || null,
     root: root || instance,
+    prop: prop || null,
     // .on(event[, prop], callback)
     on: on,
     // .off(event[, prop][, callback])
