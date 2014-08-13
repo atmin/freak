@@ -5,6 +5,32 @@ Functional reactive object wrapper
 
 [jtmpl](https://github.com/atmin/jtmpl) data model.
 
+
+What
+----
+
+Freak recursively wraps a plain JavaScript object into a accessor function,
+`model = freak(obj)`, which:
+
+- given `prop` argument returns property value: `a = model('foo')`
+
+- given `prop` and `value` arguments sets `prop` to `value`:
+  `model('foo', 42)`
+
+- a property can be computed (defined as a function) and it can
+access other properties via the `this` accessor function, which serves
+as the [destiny
+operator](http://paulstovell.com/blog/reactive-programming)
+
+- each property is observable: `model.on('change', 'foo', function...)`
+(including arrays: `model('arr').on('insert', function...)`)
+
+
+Literate tests
+--------------
+
+Tests follow, processed by [jsmd](https://github.com/vesln/jsmd)
+
 <!-- js
 var freak = require('./freak.js');
 -->
