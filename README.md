@@ -26,18 +26,23 @@ operator](http://paulstovell.com/blog/reactive-programming)
 (including arrays: `model('arr').on('insert', function...)`)
 
 
-Literate tests
---------------
+Specification
+-------------
 
-Tests follow, processed by [jsmd](https://github.com/vesln/jsmd)
+Tests are processed by [jsmd](https://github.com/vesln/jsmd)
 
 <!-- js
 var freak = require('./freak.js');
 -->
 
+
+### Example object
+
+Illustrates all capabilities. `this` is the accessor function of
+current context.
+
 ```js
 
-// Our reactive object. `this` is the current freak instance
 var obj = {
 
   // Simple properties
@@ -79,13 +84,24 @@ var obj = {
   }
 
 };
+```
 
-// Model wraps object
+Model wraps object
+
+``` js
 var model = freak(obj);
+```
 
-// Freak returns accessor function
+
+Freak returns accessor function
+
+``` js
 typeof model; // => 'function'
+```
 
+Implement simple event log and attach some event handlers to model.
+
+``` js
 // Event log in reverse chronological order
 var log = [];
 
@@ -108,7 +124,11 @@ model('arr').on('delete', function(index, count) {
 model('arr').on('change', 0, function() {
   log.unshift('arr[0] = ' + this(0));
 });
+```
 
+### Literate tests
+
+``` js
 // Get property
 model('a'); // => 1
 
@@ -208,5 +228,5 @@ log[0]; // => '2 element(s) inserted at 0'
 model = freak({a: [[1]]});
 model('a').unshift([2]);
 model('a').values[0] === model('a')(0).values; // => true
-
 ```
+
