@@ -228,5 +228,9 @@ log[0]; // => '2 element(s) inserted at 0'
 model = freak({a: [[1]]});
 model('a').unshift([2]);
 model('a').values[0] === model('a')(0).values; // => true
+
+model = freak({a: {b: 22}});
+model('a', {c: 42});
+model('a').values.c === 42; // => true
 ```
 

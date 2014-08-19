@@ -27,9 +27,9 @@ function freak(obj, root, parent, prop) {
   // Event functions
   function on() {
     var event = arguments[0];
-    var prop = ['string', 'number'].indexOf(typeof arguments[1]) > -1 ? 
+    var prop = ['string', 'number'].indexOf(typeof arguments[1]) > -1 ?
       arguments[1] : null;
-    var callback = 
+    var callback =
       typeof arguments[1] === 'function' ?
         arguments[1] :
         typeof arguments[2] === 'function' ?
@@ -55,7 +55,7 @@ function freak(obj, root, parent, prop) {
   function off() {
     var event = arguments[0];
     var prop = typeof arguments[1] === 'string' ? arguments[1] : null;
-    var callback = 
+    var callback =
       typeof arguments[1] === 'function' ?
         arguments[1] :
         typeof arguments[2] === 'function' ?
@@ -76,7 +76,7 @@ function freak(obj, root, parent, prop) {
       }
     }
 
-  }  
+  }
 
   // trigger('change', prop)
   // trigger('insert' or 'delete', index, count)
@@ -114,7 +114,7 @@ function freak(obj, root, parent, prop) {
         // Static property (leaf in the dependency tree)
         val;
 
-      return typeof result === 'object' ? 
+      return typeof result === 'object' ?
 
         typeof children[prop] === 'function' ?
           children[prop] :
@@ -134,6 +134,9 @@ function freak(obj, root, parent, prop) {
         else {
           // Simple property. `arg` is the new value
           obj[prop] = arg;
+          if (typeof arg === 'object') {
+            children[prop] = freak(arg, root || instance, instance, prop);
+          }
         }
       }
 
@@ -146,7 +149,7 @@ function freak(obj, root, parent, prop) {
       // Emit update event
       trigger('change', prop);
 
-    } // if getter        
+    } // if getter
 
   } // end accessor
 
