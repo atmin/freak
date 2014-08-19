@@ -114,7 +114,7 @@ function freak(obj, root, parent, prop) {
         // Static property (leaf in the dependency tree)
         val;
 
-      return typeof result === 'object' ?
+      return result && typeof result === 'object' ?
 
         typeof children[prop] === 'function' ?
           children[prop] :
@@ -134,8 +134,11 @@ function freak(obj, root, parent, prop) {
         else {
           // Simple property. `arg` is the new value
           obj[prop] = arg;
-          if (typeof arg === 'object') {
+          if (arg && typeof arg === 'object') {
             children[prop] = freak(arg, root || instance, instance, prop);
+          }
+          else {
+            delete children[prop];
           }
         }
       }

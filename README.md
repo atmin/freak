@@ -232,5 +232,7 @@ model('a').values[0] === model('a')(0).values; // => true
 model = freak({a: {b: 22}});
 model('a', {c: 42});
 model('a').values.c === 42; // => true
+model('a', null);
+model('a'); // => null
 ```
 
