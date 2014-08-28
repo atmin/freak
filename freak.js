@@ -87,6 +87,13 @@ function freak(obj, root, parent, prop) {
       });
   }
 
+  function notifyParent() {
+    if (instance.parent) {
+      // Notify computed properties, depending on parent object
+      instance.parent(instance.prop, null, true);
+    }
+  }
+
   // Functional accessor
   function accessor(prop, arg, refresh) {
 
@@ -149,6 +156,8 @@ function freak(obj, root, parent, prop) {
         accessor(dep[i], arg, true);
       }
 
+      notifyParent();
+
       // Emit update event
       trigger('change', prop);
 
@@ -156,60 +165,51 @@ function freak(obj, root, parent, prop) {
 
   } // end accessor
 
+  function wrapArrayMethod(method, f) {
+    return function() {
+      var result = [][method].apply(obj, arguments);
+      this.len = this.values.length;
+      f.apply(this, arguments);
+      notifyParent();
+      return result;
+    };
+  }
+
   var arrayProperties = {
     // Function prototype already contains length
     len: obj.length,
 
-    pop: function() {
-      var result = [].pop.apply(obj);
-      this.len = this.values.length;
+    pop: wrapArrayMethod('pop', function() {
       trigger('delete', this.len, 1);
-      return result;
-    },
+    }),
 
-    push: function() {
-      var result = [].push.apply(obj, arguments);
-      this.len = this.values.length;
+    push: wrapArrayMethod('push', function() {
       trigger('insert', this.len - 1, 1);
-      return result;
-    },
+    }),
 
-    reverse: function() {
-      var result = [].reverse.apply(obj);
-      this.len = obj.length;
+    reverse: wrapArrayMethod('reverse', function() {
       children = {};
       trigger('delete', 0, this.len);
       trigger('insert', 0, this.len);
-      return result;
-    },
+    }),
 
-    shift: function() {
-      var result = [].shift.apply(obj);
-      this.len = obj.length;
+    shift: wrapArrayMethod('shift', function() {
       children = {};
       trigger('delete', 0, 1);
-      return result;
-    },
+    }),
 
-    unshift: function() {
-      var result = [].unshift.apply(obj, arguments);
-      this.len = obj.length;
+    unshift: wrapArrayMethod('unshift', function() {
       children = {};
       trigger('insert', 0, 1);
-      return result;
-    },
+    }),
 
-    sort: function() {
-      var result = [].sort.apply(obj, arguments);
+    sort: wrapArrayMethod('sort', function() {
       children = {};
       trigger('delete', 0, this.len);
       trigger('insert', 0, this.len);
-      return result;
-    },
+    }),
 
-    splice: function() {
-      var result = [].splice.apply(obj, arguments);
-      this.len = obj.length;
+    splice: wrapArrayMethod('splice', function() {
       children = {};
       if (arguments[1]) {
         trigger('delete', arguments[0], arguments[1]);
@@ -217,8 +217,7 @@ function freak(obj, root, parent, prop) {
       if (arguments.length > 2) {
         trigger('insert', arguments[0], arguments.length - 2);
       }
-      return result;
-    }
+    })
 
   };
 

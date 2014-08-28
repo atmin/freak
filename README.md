@@ -9,10 +9,10 @@ Functional reactive object wrapper
 What
 ----
 
-Freak recursively wraps a plain JavaScript object into a accessor function,
+Freak recursively wraps a plain JavaScript object into an accessor function,
 `model = freak(obj)`, which:
 
-- given `prop` argument returns property value: `a = model('foo')`
+- given `prop` argument returns property value: `foo = model('foo')`
 
 - given `prop` and `value` arguments sets `prop` to `value`:
   `model('foo', 42)`
@@ -234,5 +234,37 @@ model('a', {c: 42});
 model('a').values.c === 42; // => true
 model('a', null);
 model('a'); // => null
+
+
+// Computed properties, depending on object,
+// are notified when field changes
+
+model = freak({
+  a: [1, 2, 3],
+  s: function() {
+    return this('a').values.reduce(function(a,b) { return a + b }, 0);
+  }
+});
+model.on('change', 's', function() {
+  log.unshift('s=' + this('s'));
+});
+model('s'); // init dependency tracking
+model('a')(0, 2);
+log[0]; // => 's=7'
+model('a').push(3);
+log[0]; // => 's=10'
+
+model = freak({
+  a: { b: 1 },
+  j: function() {
+    return JSON.stringify(this('a').values);
+  }
+});
+model.on('change', 'j', function() {
+  log.unshift(this('j'));
+});
+model('j'); // init dependency tracking
+model('a')('b', 2);
+log[0]; // => '{"b":2}'
 ```
 
