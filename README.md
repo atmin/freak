@@ -236,8 +236,8 @@ model('a', null);
 model('a'); // => null
 
 
-// Computed properties, depending on object,
-// are notified when field changes
+// Computed properties, depending on array,
+// are notified when element changes
 
 model = freak({
   a: [1, 2, 3],
@@ -254,17 +254,5 @@ log[0]; // => 's=7'
 model('a').push(3);
 log[0]; // => 's=10'
 
-model = freak({
-  a: { b: 1 },
-  j: function() {
-    return JSON.stringify(this('a').values);
-  }
-});
-model.on('change', 'j', function() {
-  log.unshift(this('j'));
-});
-model('j'); // init dependency tracking
-model('a')('b', 2);
-log[0]; // => '{"b":2}'
 ```
 

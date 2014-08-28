@@ -156,7 +156,9 @@ function freak(obj, root, parent, prop) {
         accessor(dep[i], arg, true);
       }
 
-      notifyParent();
+      if (!isNaN(+prop)) {
+        notifyParent();
+      }
 
       // Emit update event
       trigger('change', prop);
