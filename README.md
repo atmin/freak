@@ -242,7 +242,7 @@ model('a'); // => null
 model = freak({
   a: [1, 2, 3],
   s: function() {
-    return this('a').values.reduce(function(a,b) { return a + b }, 0);
+    return this('a').values.reduce(function(a,b) { return a + b });
   }
 });
 model.on('change', 's', function() {
@@ -252,6 +252,21 @@ model('s'); // init dependency tracking
 model('a')(0, 2);
 log[0]; // => 's=7'
 model('a').push(3);
+log[0]; // => 's=10'
+
+model = freak({
+  a: [{b: 1}, {b: 2}, {b: 3}],
+  s: function() {
+    return this('a').values.reduce(function(a,b) { return { b: a.b + b.b }; }).b;
+  }
+});
+model.on('change', 's', function() {
+  log.unshift('s=' + this('s'));
+});
+model('s'); // init dependency tracking
+model('a')(0)('b', 2);
+log[0]; // => 's=7'
+model('a').push({b: 3});
 log[0]; // => 's=10'
 
 ```

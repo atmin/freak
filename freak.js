@@ -88,9 +88,15 @@ function freak(obj, root, parent, prop) {
   }
 
   function notifyParent() {
-    if (instance.parent) {
+    if (Array.isArray(instance.values)) {
       // Notify computed properties, depending on parent object
       instance.parent(instance.prop, null, true);
+    }
+
+    if (instance.parent &&
+        Array.isArray(instance.parent.values)) {
+      // Member of object, that's array's element changed
+      instance.parent.parent(instance.parent.prop, null, true);
     }
   }
 
@@ -156,9 +162,7 @@ function freak(obj, root, parent, prop) {
         accessor(dep[i], arg, true);
       }
 
-      if (!isNaN(+prop)) {
-        notifyParent();
-      }
+      notifyParent();
 
       // Emit update event
       trigger('change', prop);
