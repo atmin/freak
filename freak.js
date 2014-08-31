@@ -11,6 +11,7 @@ function freak(obj, root, parent, prop) {
   var dependents = {};
   var cache = {};
 
+  // Assert condition
   function assert(cond, msg) {
     if (!cond) {
       throw msg || 'assertion failed';
@@ -53,6 +54,7 @@ function freak(obj, root, parent, prop) {
     }
   }
 
+  // Remove all or specified listeners given event and property
   function off() {
     var event = arguments[0];
     var prop = typeof arguments[1] === 'string' ? arguments[1] : null;
@@ -89,6 +91,8 @@ function freak(obj, root, parent, prop) {
       });
   }
 
+  // Update handler: recalculate dependent properties,
+  // trigger change if necessary
   function update(prop) {
     if (cache[prop] !== getter(prop)) {
       trigger('change', prop);
@@ -106,6 +110,8 @@ function freak(obj, root, parent, prop) {
     }
   }
 
+  // Proxy the accessor function to record
+  // all accessed properties
   function getDependencyTracker(prop) {
     return function(_prop, _arg) {
       if (!dependents[_prop]) {
@@ -118,6 +124,8 @@ function freak(obj, root, parent, prop) {
     }
   }
 
+  // Getter for prop, if callback is given
+  // can return async value
   function getter(prop, callback) {
     var val = obj[prop];
 
@@ -136,6 +144,7 @@ function freak(obj, root, parent, prop) {
       result;
   }
 
+  // Set prop to val
   function setter(prop, val) {
     if (typeof obj[prop] === 'function') {
       // Computed property setter
@@ -152,7 +161,7 @@ function freak(obj, root, parent, prop) {
     trigger('update', prop);
   }
 
-  // Functional accessor
+  // Functional accessor, unify getter and setter
   function accessor(prop, arg) {
     return (
       (arg === undefined || typeof arg === 'function') ?
@@ -160,68 +169,13 @@ function freak(obj, root, parent, prop) {
     )(prop, arg);
   }
 
-
-  function wrapArrayMethod(method, f) {
-    return function() {
-      var result = [][method].apply(obj, arguments);
-      this.len = this.values.length;
-      f.apply(this, arguments);
-      instance.parent.trigger('update', instance.prop);
-      return result;
-    };
-  }
-
-  var arrayProperties = {
-    // Function prototype already contains length
-    len: obj.length,
-
-    pop: wrapArrayMethod('pop', function() {
-      trigger('delete', this.len, 1);
-    }),
-
-    push: wrapArrayMethod('push', function() {
-      trigger('insert', this.len - 1, 1);
-    }),
-
-    reverse: wrapArrayMethod('reverse', function() {
-      cache = {};
-      trigger('delete', 0, this.len);
-      trigger('insert', 0, this.len);
-    }),
-
-    shift: wrapArrayMethod('shift', function() {
-      cache = {};
-      trigger('delete', 0, 1);
-    }),
-
-    unshift: wrapArrayMethod('unshift', function() {
-      cache = {};
-      trigger('insert', 0, 1);
-    }),
-
-    sort: wrapArrayMethod('sort', function() {
-      cache = {};
-      trigger('delete', 0, this.len);
-      trigger('insert', 0, this.len);
-    }),
-
-    splice: wrapArrayMethod('splice', function() {
-      cache = {};
-      if (arguments[1]) {
-        trigger('delete', arguments[0], arguments[1]);
-      }
-      if (arguments.length > 2) {
-        trigger('insert', arguments[0], arguments.length - 2);
-      }
-    })
-
-  };
-
+  // Create freak instance
   var instance = function() {
     return accessor.apply(null, arguments);
   };
 
-  var instanceProperties = {
+  // Attach instance properties
+  mixin(instance, {
     values: obj,
     parent: parent || null,
     root: root || instance,
@@ -232,12 +186,67 @@ function freak(obj, root, parent, prop) {
     off: off,
     // .trigger(event[, prop])
     trigger: trigger
-  };
+  });
 
-  mixin(instance, instanceProperties);
+  // Wrap mutating array method to update
+  // state and notify listeners
+  function wrapArrayMethod(method, func) {
+    return function() {
+      var result = [][method].apply(obj, arguments);
+      this.len = this.values.length;
+      func.apply(this, arguments);
+      instance.parent.trigger('update', instance.prop);
+      return result;
+    };
+  }
 
   if (Array.isArray(obj)) {
-    mixin(instance, arrayProperties);
+    mixin(instance, {
+      // Function prototype already contains length
+      // This specifies array length
+      len: obj.length,
+
+      pop: wrapArrayMethod('pop', function() {
+        trigger('delete', this.len, 1);
+      }),
+
+      push: wrapArrayMethod('push', function() {
+        trigger('insert', this.len - 1, 1);
+      }),
+
+      reverse: wrapArrayMethod('reverse', function() {
+        cache = {};
+        trigger('delete', 0, this.len);
+        trigger('insert', 0, this.len);
+      }),
+
+      shift: wrapArrayMethod('shift', function() {
+        cache = {};
+        trigger('delete', 0, 1);
+      }),
+
+      unshift: wrapArrayMethod('unshift', function() {
+        cache = {};
+        trigger('insert', 0, 1);
+      }),
+
+      sort: wrapArrayMethod('sort', function() {
+        cache = {};
+        trigger('delete', 0, this.len);
+        trigger('insert', 0, this.len);
+      }),
+
+      splice: wrapArrayMethod('splice', function() {
+        cache = {};
+        if (arguments[1]) {
+          trigger('delete', arguments[0], arguments[1]);
+        }
+        if (arguments.length > 2) {
+          trigger('insert', arguments[0], arguments.length - 2);
+        }
+      })
+
+    });
   }
 
   on('update', update);
