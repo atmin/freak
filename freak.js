@@ -4,11 +4,12 @@ function freak(obj, root, parent, prop) {
 
   var listeners = {
     'change': {},
+    'update': {},
     'insert': {},
     'delete': {}
   };
   var dependents = {};
-  var children = {};
+  var cache = {};
 
   function assert(cond, msg) {
     if (!cond) {
@@ -36,10 +37,10 @@ function freak(obj, root, parent, prop) {
           arguments[2] : null;
 
     // Args check
-    assert(['change', 'insert', 'delete'].indexOf(event) > -1);
+    assert(['change', 'update', 'insert', 'delete'].indexOf(event) > -1);
     assert(
-      (event === 'change' && prop !== null) ||
-      ((event === 'insert' || event === 'delete') && !prop)
+      (['change'].indexOf(event) > -1 && prop !== null) ||
+      (['insert', 'delete', 'update'].indexOf(event) > -1 && prop === null)
     );
 
     // Init listeners for prop
@@ -79,104 +80,93 @@ function freak(obj, root, parent, prop) {
   }
 
   // trigger('change', prop)
+  // trigger('update', prop)
   // trigger('insert' or 'delete', index, count)
   function trigger(event, a, b) {
-    (listeners[event][event === 'change' ? a : null] || [])
+    (listeners[event][['change'].indexOf(event) > -1 ? a : null] || [])
       .map(function(listener) {
         listener.call(instance, a, b);
       });
   }
 
-  function notifyParent() {
-    if (Array.isArray(instance.values)) {
-      // Notify computed properties, depending on parent object
-      instance.parent(instance.prop, null, true);
+  function update(prop) {
+    if (cache[prop] !== getter(prop)) {
+      trigger('change', prop);
     }
 
-    if (instance.parent &&
-        Array.isArray(instance.parent.values)) {
-      // Member of object, that's array's element changed
-      instance.parent.parent(instance.parent.prop, null, true);
+    // Notify dependents
+    for (var i = 0, dep = dependents[prop] || [], len = dep.length;
+        i < len; i++) {
+      instance.trigger('update', dep[i]);
+    }
+
+    if (instance.parent) {
+      // Notify computed properties, depending on parent object
+      instance.parent.trigger('update', instance.prop);
     }
   }
 
-  // Functional accessor
-  function accessor(prop, arg, refresh) {
-
-    var i, len, dep, result, val;
-
-    // Lift accessor, track dependencies
-    function dependencyTracker(_prop, _arg, _refresh) {
+  function getDependencyTracker(prop) {
+    return function(_prop, _arg) {
       if (!dependents[_prop]) {
         dependents[_prop] = [];
       }
       if (dependents[_prop].indexOf(prop) === -1) {
         dependents[_prop].push(prop);
       }
-      return accessor(_prop, _arg, _refresh);
+      return accessor(_prop, _arg);
     }
+  }
 
-    // Getter?
-    if ((arg === undefined || typeof arg === 'function') && !refresh) {
+  function getter(prop, callback) {
+    var val = obj[prop];
 
-      val = obj[prop];
+    var result = (typeof val === 'function') ?
+      // Computed property
+      cache[prop] = val.call(getDependencyTracker(prop), callback) :
+      // Static property (leaf in the dependency tree)
+      val;
 
-      result = (typeof val === 'function') ?
-        // Computed property
-        val.call(dependencyTracker, arg) :
-        // Static property (leaf in the dependency tree)
-        val;
+    return result && typeof result === 'object' ?
 
-      return result && typeof result === 'object' ?
+      typeof cache[prop] === 'function' ?
+        cache[prop] :
+        cache[prop] = freak(val, root || instance, instance, prop) :
 
-        typeof children[prop] === 'function' ?
-          children[prop] :
-          children[prop] = freak(val, root || instance, instance, prop) :
+      result;
+  }
 
-        result;
+  function setter(prop, val) {
+    if (typeof obj[prop] === 'function') {
+      // Computed property setter
+      obj[prop].call(getDependencyTracker(prop), val);
     }
-
-    // Setter
     else {
-
-      if (!refresh) {
-        if (typeof obj[prop] === 'function') {
-          // Computed property setter
-          obj[prop].call(dependencyTracker, arg);
-        }
-        else {
-          // Simple property. `arg` is the new value
-          obj[prop] = arg;
-          if (arg && typeof arg === 'object') {
-            children[prop] = freak(arg, root || instance, instance, prop);
-          }
-          else {
-            delete children[prop];
-          }
-        }
+      // Simple property
+      obj[prop] = val;
+      if (val && typeof val === 'object') {
+        delete cache[prop];
       }
+    }
 
-      // Notify dependents
-      for (i = 0, dep = dependents[prop] || [], len = dep.length;
-          i < len; i++) {
-        accessor(dep[i], arg, true);
-      }
+    trigger('update', prop);
+  }
 
-      notifyParent();
+  // Functional accessor
+  function accessor(prop, arg) {
+    return (
+      (arg === undefined || typeof arg === 'function') ?
+        getter : setter
+    )(prop, arg);
+  }
 
-      // Emit update event
-      trigger('change', prop);
-
-    } // if getter
-
-  } // end accessor
 
   function wrapArrayMethod(method, f) {
     return function() {
       var result = [][method].apply(obj, arguments);
       this.len = this.values.length;
       f.apply(this, arguments);
-      notifyParent();
+      instance.parent.trigger('update', instance.prop);
       return result;
     };
   }
@@ -194,29 +184,29 @@ function freak(obj, root, parent, prop) {
     }),
 
     reverse: wrapArrayMethod('reverse', function() {
-      children = {};
+      cache = {};
       trigger('delete', 0, this.len);
       trigger('insert', 0, this.len);
     }),
 
     shift: wrapArrayMethod('shift', function() {
-      children = {};
+      cache = {};
       trigger('delete', 0, 1);
     }),
 
     unshift: wrapArrayMethod('unshift', function() {
-      children = {};
+      cache = {};
       trigger('insert', 0, 1);
     }),
 
     sort: wrapArrayMethod('sort', function() {
-      children = {};
+      cache = {};
       trigger('delete', 0, this.len);
       trigger('insert', 0, this.len);
     }),
 
     splice: wrapArrayMethod('splice', function() {
-      children = {};
+      cache = {};
       if (arguments[1]) {
         trigger('delete', arguments[0], arguments[1]);
       }
@@ -239,7 +229,9 @@ function freak(obj, root, parent, prop) {
     // .on(event[, prop], callback)
     on: on,
     // .off(event[, prop][, callback])
-    off: off
+    off: off,
+    // .trigger(event[, prop])
+    trigger: trigger
   };
 
   mixin(instance, instanceProperties);
@@ -247,6 +239,8 @@ function freak(obj, root, parent, prop) {
   if (Array.isArray(obj)) {
     mixin(instance, arrayProperties);
   }
+
+  on('update', update);
 
   return instance;
 }

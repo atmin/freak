@@ -192,9 +192,10 @@ model.prop; // => null
 
 // Mutating array methods tests
 
-// Set arr[0] to 1 again, change event should fire nonetheless
+// Set arr[0] to 2
+model('arr')(0, 2);
+log[0]; // => 'arr[0] = 2'
 model('arr')(0, 1);
-log[0]; // => 'arr[0] = 1'
 
 model('arr').push(42);
 model('arr').values; // => [1, 3, 42]
