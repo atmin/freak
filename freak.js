@@ -94,7 +94,7 @@ function freak(obj, root, parent, prop) {
   // Update handler: recalculate dependent properties,
   // trigger change if necessary
   function update(prop) {
-    if (cache[prop] !== getter(prop)) {
+    if (typeof cache[prop] !== 'function' && cache[prop] !== getter(prop)) {
       trigger('change', prop);
     }
 
