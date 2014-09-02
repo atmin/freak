@@ -93,8 +93,10 @@ function freak(obj, root, parent, prop) {
 
   // Update handler: recalculate dependent properties,
   // trigger change if necessary
-  function update(prop) {
-    if (typeof cache[prop] !== 'function' && cache[prop] !== getter(prop)) {
+  function update(prop, innerProp) {
+    if (typeof cache[prop] === 'function' && innerProp !== undefined ?
+        cache[prop](innerProp) !== instance(prop)(innerProp) :
+        cache[prop] !== instance(prop)) {
       trigger('change', prop);
     }
 
@@ -106,7 +108,7 @@ function freak(obj, root, parent, prop) {
 
     if (instance.parent) {
       // Notify computed properties, depending on parent object
-      instance.parent.trigger('update', instance.prop);
+      instance.parent.trigger('update', instance.prop, prop);
     }
   }
 
@@ -132,7 +134,7 @@ function freak(obj, root, parent, prop) {
     var result = (typeof val === 'function') ?
       // Computed property
       cache[prop] = val.call(getDependencyTracker(prop), callback) :
-      // Static property (leaf in the dependency tree)
+      // Static property (leaf node in the dependency graph)
       val;
 
     return result && typeof result === 'object' ?
@@ -146,6 +148,8 @@ function freak(obj, root, parent, prop) {
 
   // Set prop to val
   function setter(prop, val) {
+    var oldVal = getter(prop);
+
     if (typeof obj[prop] === 'function') {
       // Computed property setter
       obj[prop].call(getDependencyTracker(prop), val);
@@ -158,7 +162,9 @@ function freak(obj, root, parent, prop) {
       }
     }
 
-    trigger('update', prop);
+    if (oldVal !== val) {
+      trigger('update', prop);
+    }
   }
 
   // Functional accessor, unify getter and setter
