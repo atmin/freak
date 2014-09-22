@@ -290,14 +290,43 @@ model.on('change', 'even', function() {
 
 // Put an "anchor" log entry
 log.unshift('no change');
+
 model('even').values; // => [2, 4]
 
-// model('even') should NOT change after following push
+// model('even') should NOT change after following pushes
 model('a').push(5);
-//log[0]; // => 'no change'
+model('a').push(7);
+log[0]; // => 'no change'
 
 // Now it should change, as we push even element
 model('a').push(6);
 log[0]; // => 'even = 2,4,6'
+
+// Same test for array of objects
+model = freak({
+  a: [{b: 1}, {b: 2}, {b: 3}, {b: 4}],
+  even: function() {
+    return this('a').values.filter(function(el) {
+      return el.b % 2 === 0;
+    });
+  }
+});
+model.on('change', 'even', function() {
+  log.unshift('even = ' + JSON.stringify(this('even').values));
+});
+
+// Put an "anchor" log entry
+log.unshift('no change');
+
+model('even').values; // => [{"b":2}, {"b":4}]
+
+// model('even') should NOT change after following pushes
+model('a').push({b: 5});
+model('a').push({b: 7});
+log[0]; // => 'no change'
+
+// Now it should change, as we push even element
+model('a').push({b: 6});
+log[0]; // => 'even = [{"b":2},{"b":4},{"b":6}]'
 ```
 

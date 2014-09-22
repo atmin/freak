@@ -123,7 +123,7 @@ function freak(obj, root, parent, prop) {
   // Update handler: recalculate dependent properties,
   // trigger change if necessary
   function update(prop, innerProp) {
-    if (cache[prop] !== instance(prop)) {
+    if (!deepEqual(cache[prop], get(prop))) {
       trigger('change', prop);
     }
 
