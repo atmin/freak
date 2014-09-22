@@ -274,5 +274,30 @@ log[0]; // => 's=7'
 model('a').push({b: 3});
 log[0]; // => 's=10'
 
+
+// Computed properties returning object/array
+model = freak({
+  a: [1, 2, 3, 4],
+  even: function() {
+    return this('a').values.filter(function(el) {
+      return el % 2 === 0;
+    });
+  }
+});
+model.on('change', 'even', function() {
+  log.unshift('even = ' + this('even').values.toString());
+});
+
+// Put an "anchor" log entry
+log.unshift('no change');
+model('even').values; // => [2, 4]
+
+// model('even') should NOT change after following push
+model('a').push(5);
+//log[0]; // => 'no change'
+
+// Now it should change, as we push even element
+model('a').push(6);
+log[0]; // => 'even = 2,4,6'
 ```
 

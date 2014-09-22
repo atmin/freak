@@ -10,6 +10,7 @@ function freak(obj, root, parent, prop) {
   };
   var dependents = {};
   var cache = {};
+  var children = {};
 
   // Assert condition
   function assert(cond, msg) {
@@ -24,6 +25,34 @@ function freak(obj, root, parent, prop) {
         i < len; i++) {
       target[props[i]] = properties[props[i]];
     }
+  }
+
+  function deepEqual(x, y) {
+    if (typeof x === "object" && x !== null &&
+        typeof y === "object" && y !== null) {
+
+      if (Object.keys(x).length !== Object.keys(y).length) {
+        return false;
+      }
+
+      for (var prop in x) {
+        if (y.hasOwnProperty(prop)) {
+          if (!deepEqual(x[prop], y[prop])) {
+            return false;
+          }
+        }
+        else {
+          return false;
+        }
+      }
+
+      return true;
+    }
+    else if (x !== y) {
+      return false;
+    }
+
+    return true;
   }
 
   // Event functions
@@ -94,15 +123,14 @@ function freak(obj, root, parent, prop) {
   // Update handler: recalculate dependent properties,
   // trigger change if necessary
   function update(prop, innerProp) {
-    if (typeof cache[prop] === 'function' && innerProp !== undefined ?
-        cache[prop](innerProp) !== instance(prop)(innerProp) :
-        cache[prop] !== instance(prop)) {
+    if (cache[prop] !== instance(prop)) {
       trigger('change', prop);
     }
 
     // Notify dependents
     for (var i = 0, dep = dependents[prop] || [], len = dep.length;
         i < len; i++) {
+      delete children[dep[i]];
       instance.trigger('update', dep[i]);
     }
 
@@ -128,27 +156,31 @@ function freak(obj, root, parent, prop) {
 
   // Getter for prop, if callback is given
   // can return async value
-  function getter(prop, callback) {
+  function get(prop, callback) {
     var val = obj[prop];
 
-    var result = (typeof val === 'function') ?
+    return (typeof val === 'function') ?
       // Computed property
       cache[prop] = val.call(getDependencyTracker(prop), callback) :
       // Static property (leaf node in the dependency graph)
       val;
+  }
+
+  function getter(prop, callback) {
+    var result = get(prop, callback);
 
     return result && typeof result === 'object' ?
 
-      typeof cache[prop] === 'function' ?
-        cache[prop] :
-        cache[prop] = freak(val, root || instance, instance, prop) :
+      typeof children[prop] === 'function' ?
+        children[prop] :
+        children[prop] = freak(result, root || instance, instance, prop) :
 
       result;
   }
 
   // Set prop to val
   function setter(prop, val) {
-    var oldVal = getter(prop);
+    var oldVal = get(prop);
 
     if (typeof obj[prop] === 'function') {
       // Computed property setter
