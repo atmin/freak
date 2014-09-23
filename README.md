@@ -284,23 +284,36 @@ model = freak({
     });
   }
 });
-model.on('change', 'even', function() {
-  log.unshift('even = ' + this('even').values.toString());
+model.on('change', 'a', function() {
+  log.unshift('a = ' + JSON.stringify(this('a').values));
 });
-
-// Put an "anchor" log entry
-log.unshift('no change');
+model.on('change', 'even', function() {
+  log.unshift('even = ' + JSON.stringify(this('even').values));
+});
+model('a').on('insert', function() {
+  log.unshift('insert into a');
+});
+model('a').on('delete', function() {
+  log.unshift('delete from a');
+});
+model('even').on('insert', function() {
+  log.unshift('insert into even');
+});
+model('even').on('delete', function() {
+  log.unshift('delete from even');
+});
 
 model('even').values; // => [2, 4]
 
 // model('even') should NOT change after following pushes
 model('a').push(5);
 model('a').push(7);
-log[0]; // => 'no change'
+log[0]; // => 'insert into a'
 
 // Now it should change, as we push even element
 model('a').push(6);
-log[0]; // => 'even = 2,4,6'
+log[0]; // => 'even = [2,4,6]'
+
 
 // Same test for array of objects
 model = freak({
@@ -311,22 +324,36 @@ model = freak({
     });
   }
 });
+
+model.on('change', 'a', function() {
+  log.unshift('a = ' + JSON.stringify(this('a').values));
+});
 model.on('change', 'even', function() {
   log.unshift('even = ' + JSON.stringify(this('even').values));
 });
-
-// Put an "anchor" log entry
-log.unshift('no change');
+model('a').on('insert', function() {
+  log.unshift('insert into a');
+});
+model('a').on('delete', function() {
+  log.unshift('delete from a');
+});
+model('even').on('insert', function() {
+  log.unshift('insert into even');
+});
+model('even').on('delete', function() {
+  log.unshift('delete from even');
+});
 
 model('even').values; // => [{"b":2}, {"b":4}]
 
 // model('even') should NOT change after following pushes
 model('a').push({b: 5});
 model('a').push({b: 7});
-log[0]; // => 'no change'
+log[0]; // => 'insert into a'
 
 // Now it should change, as we push even element
 model('a').push({b: 6});
 log[0]; // => 'even = [{"b":2},{"b":4},{"b":6}]'
+
 ```
 

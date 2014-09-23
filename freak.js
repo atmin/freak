@@ -159,9 +159,9 @@ function freak(obj, root, parent, prop) {
   function get(prop, callback) {
     var val = obj[prop];
 
-    return (typeof val === 'function') ?
+    return cache[prop] = (typeof val === 'function') ?
       // Computed property
-      cache[prop] = val.call(getDependencyTracker(prop), callback) :
+      val.call(getDependencyTracker(prop), callback) :
       // Static property (leaf node in the dependency graph)
       val;
   }
@@ -170,11 +170,11 @@ function freak(obj, root, parent, prop) {
     var result = get(prop, callback);
 
     return result && typeof result === 'object' ?
-
-      typeof children[prop] === 'function' ?
+      // Wrap object
+      children[prop] ?
         children[prop] :
         children[prop] = freak(result, root || instance, instance, prop) :
-
+      // Simple value
       result;
   }
 
