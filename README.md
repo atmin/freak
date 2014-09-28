@@ -322,6 +322,9 @@ model = freak({
     return this('a').values.filter(function(el) {
       return el.b % 2 === 0;
     });
+  },
+  evenLength: function() {
+    return this('even').len;
   }
 });
 
@@ -330,6 +333,9 @@ model.on('change', 'a', function() {
 });
 model.on('change', 'even', function() {
   log.unshift('even = ' + JSON.stringify(this('even').values));
+});
+model.on('change', 'evenLength', function() {
+  log.unshift('evenLength = ' + this('evenLength'));
 });
 model('a').on('insert', function() {
   log.unshift('insert into a');
@@ -345,6 +351,7 @@ model('even').on('delete', function() {
 });
 
 model('even').values; // => [{"b":2}, {"b":4}]
+model('evenLength'); // => 2
 
 // model('even') should NOT change after following pushes
 model('a').push({b: 5});
@@ -353,7 +360,13 @@ log[0]; // => 'insert into a'
 
 // Now it should change, as we push even element
 model('a').push({b: 6});
-log[0]; // => 'even = [{"b":2},{"b":4},{"b":6}]'
+log[0]; // => 'evenLength = 3'
+log[1]; // => 'even = [{"b":2},{"b":4},{"b":6}]'
+
+// Changing an `a` element should trigger `even` change
+model('a')(1)('b', 1);
+log[0]; // => 'evenLength = 2'
+log[1]; // => 'even = [{"b":4},{"b":6}]'
 
 ```
 

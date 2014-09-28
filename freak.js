@@ -217,7 +217,7 @@ function freak(obj, root, parent, prop) {
     values: obj,
     parent: parent || null,
     root: root || instance,
-    prop: prop || null,
+    prop: prop === undefined ? null : prop,
     // .on(event[, prop], callback)
     on: on,
     // .off(event[, prop][, callback])
