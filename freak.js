@@ -147,19 +147,22 @@ function freak(obj, root, parent, prop) {
     function tracker(context) {
       return function(_prop, _arg) {
         if (!context._dependentProps[_prop]) {
-            context._dependentProps[_prop] = [];
-            context._dependentContexts[_prop] = [];
+          context._dependentProps[_prop] = [];
+          context._dependentContexts[_prop] = [];
         }
         if (context._dependentProps[_prop].indexOf(prop) === -1) {
-            context._dependentProps[_prop].push(prop);
-            context._dependentContexts[_prop].push(instance);
+          context._dependentProps[_prop].push(prop);
+          context._dependentContexts[_prop].push(instance);
         }
         return context(_prop, _arg);
       }
     }
     var result = tracker(instance);
-    result.parent = tracker(parent);
-    result.root = tracker(root);
+    if (parent) {
+      result.parent = tracker(parent);
+    }
+    result.root = tracker(root || instance);
+    result.values = obj;
     return result;
   }
 
