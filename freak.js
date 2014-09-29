@@ -8,7 +8,8 @@ function freak(obj, root, parent, prop) {
     'insert': {},
     'delete': {}
   };
-  var dependents = {};
+  var _dependentProps = {};
+  var _dependentContexts = {};
   var cache = {};
   var children = {};
 
@@ -128,10 +129,10 @@ function freak(obj, root, parent, prop) {
     }
 
     // Notify dependents
-    for (var i = 0, dep = dependents[prop] || [], len = dep.length;
+    for (var i = 0, dep = _dependentProps[prop] || [], len = dep.length;
         i < len; i++) {
       delete children[dep[i]];
-      instance.trigger('update', dep[i]);
+      _dependentContexts[prop][i].trigger('update', dep[i]);
     }
 
     if (instance.parent) {
@@ -143,15 +144,23 @@ function freak(obj, root, parent, prop) {
   // Proxy the accessor function to record
   // all accessed properties
   function getDependencyTracker(prop) {
-    return function(_prop, _arg) {
-      if (!dependents[_prop]) {
-        dependents[_prop] = [];
+    function tracker(context) {
+      return function(_prop, _arg) {
+        if (!context._dependentProps[_prop]) {
+            context._dependentProps[_prop] = [];
+            context._dependentContexts[_prop] = [];
+        }
+        if (context._dependentProps[_prop].indexOf(prop) === -1) {
+            context._dependentProps[_prop].push(prop);
+            context._dependentContexts[_prop].push(instance);
+        }
+        return context(_prop, _arg);
       }
-      if (dependents[_prop].indexOf(prop) === -1) {
-        dependents[_prop].push(prop);
-      }
-      return accessor(_prop, _arg);
     }
+    var result = tracker(instance);
+    result.parent = tracker(parent);
+    result.root = tracker(root);
+    return result;
   }
 
   // Getter for prop, if callback is given
@@ -223,7 +232,10 @@ function freak(obj, root, parent, prop) {
     // .off(event[, prop][, callback])
     off: off,
     // .trigger(event[, prop])
-    trigger: trigger
+    trigger: trigger,
+    // Internal: dependency tracking
+    _dependentProps: _dependentProps,
+    _dependentContexts: _dependentContexts
   });
 
   // Wrap mutating array method to update
@@ -241,7 +253,7 @@ function freak(obj, root, parent, prop) {
   if (Array.isArray(obj)) {
     mixin(instance, {
       // Function prototype already contains length
-      // This specifies array length
+      // `len` specifies array length
       len: obj.length,
 
       pop: wrapArrayMethod('pop', function() {

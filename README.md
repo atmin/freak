@@ -25,6 +25,28 @@ operator](http://paulstovell.com/blog/reactive-programming)
 - each property is observable: `model.on('change', 'foo', function...)`
 (including arrays: `model('arr').on('insert', function...)`)
 
+It's an alternative to [Object.observe](http://updates.html5rocks.com/2012/11/Respond-to-change-with-Object-observe)
+with extra features.
+
+The only concept you have to grasp is: you give up the assignment operator
+in favour of the accessor function.
+
+
+> According to Backus (and many other people), the problem with assignment statements is
+> that they divide the programming language into two distinct worlds:
+> the world of functions and algebra; and the world of assignments.
+> That’s the world on the right-hand side of an assignment statement, and everything else.
+>
+> That division stinks for a lot of reasons. Just for a start, it can rob a system of
+> a lot of its clarity; make code far more complex and hard to read; make code
+> far harder to reuse; and make it much harder to build generic code for gluing together
+> computations.
+>
+>
+> &mdash; [Backus’s Idea of Functional Programming](http://scienceblogs.com/goodmath/2007/03/20/backuss-idea-of-functional-pro-1/)
+
+
+
 
 Specification
 -------------
@@ -52,11 +74,6 @@ var obj = {
   // Array
   arr: [1, 2, 3],
 
-  // Nested object
-  obj: {
-    x: 42
-  },
-
   // Computed property
   f: function() {
     return this('a') + this('b');
@@ -67,6 +84,15 @@ var obj = {
     return this('arr').values.reduce(function(prev, curr) {
       return prev + curr;
     });
+  },
+
+  // Nested object
+  nestedObj: {
+    x: 42,
+    // Computed property, depending on another context (parent)
+    parentArrayLength: function() {
+      return this.parent('arr').len;
+    }
   },
 
   // Asynchronous computed property
@@ -143,7 +169,7 @@ log[0]; // => 'f = 4'
 model('f'); // => 4
 
 // Get child context property
-model('obj')('x'); // => 42
+model('nestedObj')('x'); // => 42
 
 // Get array element
 model('arr')(0); // => 1
@@ -173,18 +199,28 @@ model('setab', 10);
 model('f'); // => 20
 
 // You can access parent and root contexts of nested objects
-model('obj').parent === model; // => true
+model('nestedObj').parent === model; // => true
 model('arr').root === model; // => true
 model.root; // => model
 model.parent; // => null
 
 // All contexts, but root have a property name, 'prop'
 // ('name' is existing read- function property name)
-model('obj').prop; // => 'obj'
+model('nestedObj').prop; // => 'nestedObj'
 model('arr').prop; // => 'arr'
-model('obj').values === model('obj').parent(model('obj').prop).values; // => true
+model('nestedObj').values === model('nestedObj').parent(model('nestedObj').prop).values; // => true
 model.prop; // => null
 
+// Inter-context computed properties
+model('nestedObj')('parentArrayLength'); // => 2
+model('nestedObj').on('change', 'parentArrayLength', function() {
+  log.unshift('nestedObj.parentArrayLength = ' + model('nestedObj')('parentArrayLength'));
+});
+model('arr').push(42);
+log[0]; // => 'nestedObj.parentArrayLength = 3'
+model('arr').pop();
+log[0]; // => 'nestedObj.parentArrayLength = 2'
+model('nestedObj').off('change', 'parentArrayLength');
 
 
 
@@ -192,9 +228,12 @@ model.prop; // => null
 
 // Mutating array methods tests
 
+// Dummy log entry
+log.unshift('nope');
+
 // Set arr[0] to 1, change event should NOT fire
 model('arr')(0, 1);
-log[0]; // => 'f = 20'
+log[0]; // => 'nope'
 // Set arr[0] to 2, change event fires, value is new
 model('arr')(0, 2);
 log[0]; // => 'arr[0] = 2'

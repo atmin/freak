@@ -1,6 +1,6 @@
 {
   "name": "freak",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "description": "Functional reactive object wrapper",
   "main": "freak.js",
   "scripts": {
@@ -14,7 +14,8 @@
     "functional",
     "reactive",
     "object",
-    "wrapper"
+    "wrapper",
+    "observe"
   ],
   "author": "Atanas Minev",
   "license": "MIT",
