@@ -407,5 +407,67 @@ model('a')(1)('b', 1);
 log[0]; // => 'evenLength = 2'
 log[1]; // => 'even = [{"b":4},{"b":6}]'
 
+
+// Circular dependency tests
+
+model = freak({
+  checkboxes: [true, false, true, true],
+
+  // "Toggle All" functionality, when all are checked,
+  // `toggleAll` state is checked; setting it affects all checkboxes
+  toggleAll: function(newValue) {
+    if (typeof newValue === 'boolean') {
+      // Setter
+      this('checkboxes').values.map(function(val, i) {
+        this('checkboxes')(i, newValue);
+      }, this);
+    }
+    else {
+      // Getter
+      // (typeof newValue === 'function' in this case, callback for async call)
+      return this('checkboxes').values.reduce(function(prev, curr) {
+        // Logical 'and' of all values
+        return prev && curr;
+      }, true);
+    }
+  }
+});
+
+model('toggleAll'); // => false
+model('checkboxes')(1, true);
+model('toggleAll'); // => true
+model('toggleAll', false);
+model('checkboxes').values; // => [false, false, false, false]
+
+
+
+// Same tests, but for array of objects
+model = freak({
+  checkboxes: [{ checked: true }, { checked: false }],
+
+  toggleAll: function(newValue) {
+    if (typeof newValue === 'boolean') {
+      // Setter
+      this('checkboxes').values.map(function(val, i) {
+        this('checkboxes')(i)('checked', newValue);
+      }, this);
+    }
+    else {
+      // Getter
+      // (typeof newValue === 'function' in this case, callback for async call)
+      return this('checkboxes').values.reduce(function(prev, curr) {
+        // Logical 'and' of all checked field values
+        return prev && curr.checked;
+      }, true);
+    }
+  }
+});
+
+model('toggleAll'); // => false
+model('checkboxes')(1)('checked', true);
+model('toggleAll'); // => true
+model('toggleAll', false);
+JSON.stringify(model('checkboxes').values); // => '[{"checked":false},{"checked":false}]'
+
 ```
 
