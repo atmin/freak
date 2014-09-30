@@ -121,9 +121,38 @@ function freak(obj, root, parent, prop) {
       });
   }
 
+  // Export model to JSON string
+  // NOT exported:
+  // - properties starting with _ (Python private properties convention)
+  // - computed properties (derived from normal properties)
+  function toJSON() {
+    var key, exported = {};
+    for (var key in obj) {
+      if (typeof key !== 'function' && key[0] !== '_') {
+        exported[key] = obj[key];
+      }
+    }
+    return JSON.stringify(exported);
+  }
+
+  // Load model from JSON string or object
+  function fromJSON(data) {
+    var key;
+    if (typeof data === 'string') {
+      data = JSON.parse(data);
+    }
+    for (key in data) {
+      obj[key] = data[key];
+    }
+  }
+
   // Update handler: recalculate dependent properties,
   // trigger change if necessary
   function update(prop, innerProp) {
+    // TODO: mark currently updating properties to avoid
+    // stack overflow for circular dependencies and
+    // unnecessary recalculations for computed setters
+
     if (!deepEqual(cache[prop], get(prop))) {
       trigger('change', prop);
     }
@@ -158,11 +187,11 @@ function freak(obj, root, parent, prop) {
       }
     }
     var result = tracker(instance);
+    construct(result);
     if (parent) {
       result.parent = tracker(parent);
     }
     result.root = tracker(root || instance);
-    result.values = obj;
     return result;
   }
 
@@ -219,90 +248,97 @@ function freak(obj, root, parent, prop) {
     )(prop, arg);
   }
 
+  // Attach instance members
+  function construct(target) {
+    mixin(target, {
+      values: obj,
+      parent: parent || null,
+      root: root || target,
+      prop: prop === undefined ? null : prop,
+      // .on(event[, prop], callback)
+      on: on,
+      // .off(event[, prop][, callback])
+      off: off,
+      // .trigger(event[, prop])
+      trigger: trigger,
+      toJSON: toJSON,
+      fromJSON: fromJSON,
+      // Internal: dependency tracking
+      _dependentProps: _dependentProps,
+      _dependentContexts: _dependentContexts
+    });
+
+    // Wrap mutating array method to update
+    // state and notify listeners
+    function wrapArrayMethod(method, func) {
+      return function() {
+        var result = [][method].apply(obj, arguments);
+        this.len = this.values.length;
+        func.apply(this, arguments);
+        target.parent.trigger('update', target.prop);
+        return result;
+      };
+    }
+
+    if (Array.isArray(obj)) {
+      mixin(target, {
+        // Function prototype already contains length
+        // `len` specifies array length
+        len: obj.length,
+
+        pop: wrapArrayMethod('pop', function() {
+          trigger('delete', this.len, 1);
+        }),
+
+        push: wrapArrayMethod('push', function() {
+          trigger('insert', this.len - 1, 1);
+        }),
+
+        reverse: wrapArrayMethod('reverse', function() {
+          cache = {};
+          trigger('delete', 0, this.len);
+          trigger('insert', 0, this.len);
+        }),
+
+        shift: wrapArrayMethod('shift', function() {
+          cache = {};
+          trigger('delete', 0, 1);
+        }),
+
+        unshift: wrapArrayMethod('unshift', function() {
+          cache = {};
+          trigger('insert', 0, 1);
+        }),
+
+        sort: wrapArrayMethod('sort', function() {
+          cache = {};
+          trigger('delete', 0, this.len);
+          trigger('insert', 0, this.len);
+        }),
+
+        splice: wrapArrayMethod('splice', function() {
+          cache = {};
+          if (arguments[1]) {
+            trigger('delete', arguments[0], arguments[1]);
+          }
+          if (arguments.length > 2) {
+            trigger('insert', arguments[0], arguments.length - 2);
+          }
+        })
+
+      });
+    }
+  }
+
+  on('update', update);
+
   // Create freak instance
   var instance = function() {
     return accessor.apply(null, arguments);
   };
 
-  // Attach instance properties
-  mixin(instance, {
-    values: obj,
-    parent: parent || null,
-    root: root || instance,
-    prop: prop === undefined ? null : prop,
-    // .on(event[, prop], callback)
-    on: on,
-    // .off(event[, prop][, callback])
-    off: off,
-    // .trigger(event[, prop])
-    trigger: trigger,
-    // Internal: dependency tracking
-    _dependentProps: _dependentProps,
-    _dependentContexts: _dependentContexts
-  });
-
-  // Wrap mutating array method to update
-  // state and notify listeners
-  function wrapArrayMethod(method, func) {
-    return function() {
-      var result = [][method].apply(obj, arguments);
-      this.len = this.values.length;
-      func.apply(this, arguments);
-      instance.parent.trigger('update', instance.prop);
-      return result;
-    };
-  }
-
-  if (Array.isArray(obj)) {
-    mixin(instance, {
-      // Function prototype already contains length
-      // `len` specifies array length
-      len: obj.length,
-
-      pop: wrapArrayMethod('pop', function() {
-        trigger('delete', this.len, 1);
-      }),
-
-      push: wrapArrayMethod('push', function() {
-        trigger('insert', this.len - 1, 1);
-      }),
-
-      reverse: wrapArrayMethod('reverse', function() {
-        cache = {};
-        trigger('delete', 0, this.len);
-        trigger('insert', 0, this.len);
-      }),
-
-      shift: wrapArrayMethod('shift', function() {
-        cache = {};
-        trigger('delete', 0, 1);
-      }),
-
-      unshift: wrapArrayMethod('unshift', function() {
-        cache = {};
-        trigger('insert', 0, 1);
-      }),
-
-      sort: wrapArrayMethod('sort', function() {
-        cache = {};
-        trigger('delete', 0, this.len);
-        trigger('insert', 0, this.len);
-      }),
-
-      splice: wrapArrayMethod('splice', function() {
-        cache = {};
-        if (arguments[1]) {
-          trigger('delete', arguments[0], arguments[1]);
-        }
-        if (arguments.length > 2) {
-          trigger('insert', arguments[0], arguments.length - 2);
-        }
-      })
-
-    });
-  }
-
-  on('update', update);
+  // Attach instance members
+  construct(instance);
 
   return instance;
 }

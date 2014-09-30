@@ -469,5 +469,25 @@ model('toggleAll'); // => true
 model('toggleAll', false);
 JSON.stringify(model('checkboxes').values); // => '[{"checked":false},{"checked":false}]'
 
+
+// Serialization / deserialization tests
+
+model = freak({
+  a: 1,
+  b: [2, 2],
+  c: function() {
+    return this('a') + this('b')(0);
+  },
+  _d: 'not serialized'
+});
+model('c'); // => 3
+var exported = model.toJSON(); // => '{"a":1,"b":[2,2]}'
+exported = JSON.parse(exported);
+exported.a = 40;
+model.fromJSON(exported);
+model('c'); // => 42
+exported.a = 20;
+model.fromJSON(JSON.stringify(exported));
+model('c'); // => 22
 ```
 
