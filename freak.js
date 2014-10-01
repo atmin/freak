@@ -126,13 +126,19 @@ function freak(obj, root, parent, prop) {
   // - properties starting with _ (Python private properties convention)
   // - computed properties (derived from normal properties)
   function toJSON() {
-    var key, exported = {};
-    for (var key in obj) {
-      if (typeof key !== 'function' && key[0] !== '_') {
-        exported[key] = obj[key];
+    function filter(obj) {
+      var key, filtered = {};
+      for (key in obj) {
+        if (typeof key === 'object') {
+          filtered[key] = filter(obj);
+        }
+        if (typeof key !== 'function' && key[0] !== '_') {
+          filtered[key] = obj[key];
+        }
       }
+      return filtered;
     }
-    return JSON.stringify(exported);
+    return JSON.stringify(filter(obj));
   }
 
   // Load model from JSON string or object

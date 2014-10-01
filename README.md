@@ -478,10 +478,14 @@ model = freak({
   c: function() {
     return this('a') + this('b')(0);
   },
-  _d: 'not serialized'
+  _d: 'not serialized',
+  obj: {
+    a: 22,
+    _d: 'not serialized, as well'
+  }
 });
 model('c'); // => 3
-var exported = model.toJSON(); // => '{"a":1,"b":[2,2]}'
+var exported = model.toJSON(); // => '{"a":1,"b":[2,2],"obj":{"a":22}}'
 exported = JSON.parse(exported);
 exported.a = 40;
 model.fromJSON(exported);
