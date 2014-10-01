@@ -482,10 +482,11 @@ model = freak({
   obj: {
     a: 22,
     _d: 'not serialized, as well'
-  }
+  },
+  arr: [{a: 6}, {a: 7, _: 'nothing'}]
 });
 model('c'); // => 3
-var exported = model.toJSON(); // => '{"a":1,"b":[2,2],"obj":{"a":22}}'
+var exported = model.toJSON(); // => '{"a":1,"b":[2,2],"obj":{"a":22},"arr":[{"a":6},{"a",7}]}'
 exported = JSON.parse(exported);
 exported.a = 40;
 model.fromJSON(exported);

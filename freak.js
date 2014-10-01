@@ -127,12 +127,12 @@ function freak(obj, root, parent, prop) {
   // - computed properties (derived from normal properties)
   function toJSON() {
     function filter(obj) {
-      var key, filtered = {};
+      var key, filtered = Array.isArray(obj) ? [] : {};
       for (key in obj) {
-        if (typeof key === 'object') {
-          filtered[key] = filter(obj);
+        if (typeof obj[key] === 'object') {
+          filtered[key] = filter(obj[key]);
         }
-        if (typeof key !== 'function' && key[0] !== '_') {
+        else if (typeof obj[key] !== 'function' && key[0] !== '_') {
           filtered[key] = obj[key];
         }
       }
