@@ -494,5 +494,25 @@ model('c'); // => 42
 exported.a = 20;
 model.fromJSON(JSON.stringify(exported));
 model('c'); // => 22
+
+
+// Cousin dependencies
+model = freak({
+  1: {
+    a: function() {
+      return this.parent(2)('a')(0);
+    }
+  },
+  2: {
+    a: [22]
+  }
+});
+model(1).on('change', 'a', function() {
+  log.unshift('a=' + this('a'));
+});
+model(1)('a'); // => 22
+model(2)('a')(0, 42);
+log[0]; // => 'a=42'
+
 ```
 

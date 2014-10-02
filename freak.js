@@ -148,18 +148,16 @@ function freak(obj, root, parent, prop) {
       data = JSON.parse(data);
     }
     for (key in data) {
-      obj[key] = data[key];
+      instance(key, data[key]);
     }
+    instance.len = obj.length;
+    trigger('update');
   }
 
   // Update handler: recalculate dependent properties,
   // trigger change if necessary
-  function update(prop, innerProp) {
-    // TODO: mark currently updating properties to avoid
-    // stack overflow for circular dependencies and
-    // unnecessary recalculations for computed setters
-
-    if (!deepEqual(cache[prop], get(prop))) {
+  function update(prop) {
+    if (!deepEqual(cache[prop], get(prop, function() {}, true))) {
       trigger('change', prop);
     }
 
@@ -172,7 +170,7 @@ function freak(obj, root, parent, prop) {
 
     if (instance.parent) {
       // Notify computed properties, depending on parent object
-      instance.parent.trigger('update', instance.prop, prop);
+      instance.parent.trigger('update', instance.prop);
     }
   }
 
@@ -189,7 +187,7 @@ function freak(obj, root, parent, prop) {
           context._dependentProps[_prop].push(prop);
           context._dependentContexts[_prop].push(instance);
         }
-        return context(_prop, _arg);
+        return context(_prop, _arg, true);
       }
     }
     var result = tracker(instance);
@@ -201,20 +199,39 @@ function freak(obj, root, parent, prop) {
     return result;
   }
 
-  // Getter for prop, if callback is given
-  // can return async value
-  function get(prop, callback) {
-    var val = obj[prop];
-
-    return cache[prop] = (typeof val === 'function') ?
-      // Computed property
-      val.call(getDependencyTracker(prop), callback) :
-      // Static property (leaf node in the dependency graph)
-      val;
+  // Shallow clone an object
+  function shallowClone(obj) {
+    var key, clone;
+    if (obj && typeof obj === 'object') {
+      clone = {};
+      for (key in obj) {
+        clone[key] = obj[key];
+      }
+    }
+    else {
+      clone = obj;
+    }
+    return clone;
   }
 
-  function getter(prop, callback) {
-    var result = get(prop, callback);
+  // Getter for prop, if callback is given
+  // can return async value
+  function get(prop, callback, skipCaching) {
+    var val = obj[prop];
+    if (typeof val === 'function') {
+      val = val.call(getDependencyTracker(prop), callback);
+      if (!skipCaching) {
+        cache[prop] = (val === undefined) ? val : shallowClone(val);
+      }
+    }
+    else if (!skipCaching) {
+      cache[prop] = val;
+    }
+    return val;
+  }
+
+  function getter(prop, callback, skipCaching) {
+    var result = get(prop, callback, skipCaching);
 
     return result && typeof result === 'object' ?
       // Wrap object
@@ -247,11 +264,11 @@ function freak(obj, root, parent, prop) {
   }
 
   // Functional accessor, unify getter and setter
-  function accessor(prop, arg) {
+  function accessor(prop, arg, skipCaching) {
     return (
       (arg === undefined || typeof arg === 'function') ?
         getter : setter
-    )(prop, arg);
+    )(prop, arg, skipCaching);
   }
 
   // Attach instance members
