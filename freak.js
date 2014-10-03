@@ -150,9 +150,9 @@ function freak(obj, root, parent, prop) {
     }
     for (key in data) {
       instance(key, data[key]);
+      trigger('update', key);
     }
     instance.len = obj.length;
-    trigger('update');
   }
 
   // Update handler: recalculate dependent properties,
@@ -256,6 +256,7 @@ function freak(obj, root, parent, prop) {
       obj[prop] = val;
       if (val && typeof val === 'object') {
         delete cache[prop];
+        delete children[prop];
       }
     }
 
