@@ -297,6 +297,8 @@ function freak(obj, root, parent, prop) {
       return function() {
         var result = [][method].apply(obj, arguments);
         this.len = this.values.length;
+        cache = {};
+        children = {};
         func.apply(this, arguments);
         target.parent.trigger('update', target.prop);
         return result;
@@ -318,29 +320,24 @@ function freak(obj, root, parent, prop) {
         }),
 
         reverse: wrapArrayMethod('reverse', function() {
-          cache = {};
           trigger('delete', 0, this.len);
           trigger('insert', 0, this.len);
         }),
 
         shift: wrapArrayMethod('shift', function() {
-          cache = {};
           trigger('delete', 0, 1);
         }),
 
         unshift: wrapArrayMethod('unshift', function() {
-          cache = {};
           trigger('insert', 0, 1);
         }),
 
         sort: wrapArrayMethod('sort', function() {
-          cache = {};
           trigger('delete', 0, this.len);
           trigger('insert', 0, this.len);
         }),
 
         splice: wrapArrayMethod('splice', function() {
-          cache = {};
           if (arguments[1]) {
             trigger('delete', arguments[0], arguments[1]);
           }
