@@ -115,10 +115,11 @@ function freak(obj, root, parent, prop) {
   // trigger('update', prop)
   // trigger('insert' or 'delete', index, count)
   function trigger(event, a, b) {
-    (listeners[event][['change'].indexOf(event) > -1 ? a : null] || [])
-      .map(function(listener) {
-        listener.call(instance, a, b);
-      });
+    var handlers = (listeners[event][['change'].indexOf(event) > -1 ? a : null] || []);
+    var i, len = handlers.length;
+    for (i = 0; i < len; i++) {
+      handlers[i].call(instance, a, b);
+    };
   }
 
   // Export model to JSON string
