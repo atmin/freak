@@ -287,6 +287,8 @@ function freak(obj, root, parent, prop) {
       // .trigger(event[, prop])
       trigger: trigger,
       toJSON: toJSON,
+      // Deprecated. It has always been broken, anyway
+      // Will think how to implement properly
       fromJSON: fromJSON,
       // Internal: dependency tracking
       _dependentProps: _dependentProps,
