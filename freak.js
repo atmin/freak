@@ -37,13 +37,15 @@ function freak(obj, root, parent, prop) {
       }
 
       for (var prop in x) {
-        if (y.hasOwnProperty(prop)) {
-          if (!deepEqual(x[prop], y[prop])) {
+        if (x.hasOwnProperty(prop)) {
+          if (y.hasOwnProperty(prop)) {
+            if (!deepEqual(x[prop], y[prop])) {
+              return false;
+            }
+          }
+          else {
             return false;
           }
-        }
-        else {
-          return false;
         }
       }
 
