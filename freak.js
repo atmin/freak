@@ -299,7 +299,7 @@ function freak(obj, root, parent, prop) {
 
     // Wrap mutating array method to update
     // state and notify listeners
-    function wrapArrayMethod(method, func) {
+    function wrapMutatingArrayMethod(method, func) {
       return function() {
         var result = [][method].apply(obj, arguments);
         this.len = this.values.length;
@@ -311,39 +311,55 @@ function freak(obj, root, parent, prop) {
       };
     }
 
+    // Wrap callback of an array method to
+    // provide this content to the currently processed item
+    function proxyArrayMethod(method) {
+      return function() {
+        var callback = arguments[0];
+        return [][method].apply(
+          obj,
+          callback ?
+            [function(el, i) {
+              return callback.apply(target(i), arguments);
+            }] :
+            arguments
+        );
+      };
+    }
+
     if (Array.isArray(obj)) {
       mixin(target, {
         // Function prototype already contains length
         // `len` specifies array length
         len: obj.length,
 
-        pop: wrapArrayMethod('pop', function() {
+        pop: wrapMutatingArrayMethod('pop', function() {
           trigger('delete', this.len, 1);
         }),
 
-        push: wrapArrayMethod('push', function() {
+        push: wrapMutatingArrayMethod('push', function() {
           trigger('insert', this.len - 1, 1);
         }),
 
-        reverse: wrapArrayMethod('reverse', function() {
+        reverse: wrapMutatingArrayMethod('reverse', function() {
           trigger('delete', 0, this.len);
           trigger('insert', 0, this.len);
         }),
 
-        shift: wrapArrayMethod('shift', function() {
+        shift: wrapMutatingArrayMethod('shift', function() {
           trigger('delete', 0, 1);
         }),
 
-        unshift: wrapArrayMethod('unshift', function() {
+        unshift: wrapMutatingArrayMethod('unshift', function() {
           trigger('insert', 0, 1);
         }),
 
-        sort: wrapArrayMethod('sort', function() {
+        sort: wrapMutatingArrayMethod('sort', function() {
           trigger('delete', 0, this.len);
           trigger('insert', 0, this.len);
         }),
 
-        splice: wrapArrayMethod('splice', function() {
+        splice: wrapMutatingArrayMethod('splice', function() {
           if (arguments[1]) {
             trigger('delete', arguments[0], arguments[1]);
           }
@@ -352,6 +368,13 @@ function freak(obj, root, parent, prop) {
           }
         })
 
+      });
+
+      [
+        'forEach', 'every', 'some', 'filter', 'find', 'findIndex',
+        'keys', 'map', 'reduce', 'reduceRight'
+      ].forEach(function(method) {
+        target[method] = proxyArrayMethod(method);
       });
     }
   }

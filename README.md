@@ -514,5 +514,21 @@ model(1)('a'); // => 22
 model(2)('a')(0, 42);
 log[0]; // => 'a=42'
 
+
+
+// 'forEach', 'every', 'some', 'filter', 'find', 'findIndex',
+// 'keys', 'map', 'reduce', 'reduceRight'
+
+model = freak({
+  arr: [{a: 1}, {a: 2}, {a: 3}]
+});
+
+model('arr').forEach(function() { this('b', this('a') + 1); });
+
+model('arr').map(function() { return this('b'); }); // => [2, 3, 4]
+
+model('arr').every(function() { return this('a'); }); // => true
+
+
 ```
 
