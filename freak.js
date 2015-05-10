@@ -333,7 +333,7 @@ function freak(obj, root, parent, prop) {
           callback ?
             [function(el, i) {
               return callback.apply(target(i), arguments);
-            }] :
+            }].concat([].slice.call(arguments, 1)) :
             arguments
         );
       };

@@ -1,6 +1,6 @@
 {
   "name": "freak",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Functional reactive object wrapper",
   "main": "freak.js",
   "scripts": {
