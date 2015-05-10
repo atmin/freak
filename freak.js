@@ -3,10 +3,10 @@
 function freak(obj, root, parent, prop) {
 
   var listeners = {
-    'change': {},
-    'update': {},
-    'insert': {},
-    'delete': {}
+    'change': [],
+    'update': [],
+    'insert': [],
+    'delete': []
   };
   var _dependentProps = {};
   var _dependentContexts = {};
@@ -59,6 +59,12 @@ function freak(obj, root, parent, prop) {
   }
 
   // Event functions
+
+  // on('change', function(prop) { ... })
+  // on('change', 'prop', function() { ... })
+  // on('update', function(prop) { ... })
+  // on('insert', function(index, count) { ... })
+  // on('delete', function(index, count) { ... })
   function on() {
     var event = arguments[0];
     var prop = ['string', 'number'].indexOf(typeof arguments[1]) > -1 ?
@@ -70,19 +76,25 @@ function freak(obj, root, parent, prop) {
           arguments[2] : null;
 
     // Args check
-    assert(['change', 'update', 'insert', 'delete'].indexOf(event) > -1);
     assert(
-      (['change'].indexOf(event) > -1 && prop !== null) ||
+      (event === 'change') ||
       (['insert', 'delete', 'update'].indexOf(event) > -1 && prop === null)
     );
 
-    // Init listeners for prop
-    if (!listeners[event][prop]) {
-      listeners[event][prop] = [];
+    // Init listeners
+    if (!listeners[event]) {
+      listeners[event] = [];
     }
     // Already registered?
-    if (listeners[event][prop].indexOf(callback) === -1) {
-      listeners[event][prop].push(callback);
+    if (listeners[event].indexOf(callback) === -1) {
+      listeners[event].push(
+        (event === 'change' && prop !== null) ?
+          // on('change', 'prop', function() { ... })
+          function(_prop) {
+            if (_prop === prop) callback.call(instance);
+          } :
+          callback
+      );
     }
   }
 
@@ -117,11 +129,11 @@ function freak(obj, root, parent, prop) {
   // trigger('update', prop)
   // trigger('insert' or 'delete', index, count)
   function trigger(event, a, b) {
-    var handlers = (listeners[event][['change'].indexOf(event) > -1 ? a : null] || []);
+    var handlers = listeners[event] || [];
     var i, len = handlers.length;
     for (i = 0; i < len; i++) {
       handlers[i].call(instance, a, b);
-    };
+    }
   }
 
   // Export model to JSON string

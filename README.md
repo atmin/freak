@@ -242,11 +242,11 @@ model('arr')(0, 1);
 
 model('arr').push(42);
 model('arr').values; // => [1, 3, 42]
-log[0]; // => '1 element(s) inserted at 2'
+log[1]; // => '1 element(s) inserted at 2'
 
 model('arr').pop();
 model('arr').values; // => [1, 3]
-log[0]; // => '1 element(s) deleted from 2'
+log[1]; // => '1 element(s) deleted from 2'
 
 model('arr').reverse();
 model('arr').values; // => [3, 1]
@@ -255,11 +255,11 @@ log[0]; // => '2 element(s) inserted at 0'
 
 model('arr').shift();
 model('arr').values; // => [1]
-log[0]; // => '1 element(s) deleted from 0'
+log[1]; // => '1 element(s) deleted from 0'
 
 model('arr').unshift(42);
 model('arr').values; // => [42, 1]
-log[0]; // => '1 element(s) inserted at 0'
+log[1]; // => '1 element(s) inserted at 0'
 
 model('arr').sort();
 model('arr').values; // => [1, 42]
@@ -529,6 +529,26 @@ model('arr').map(function() { return this('b'); }); // => [2, 3, 4]
 
 model('arr').every(function() { return this('a'); }); // => true
 
+model('arr').every(function() { return this('a') - 1; }); // => false
+
+model('arr').some(function() { return this('a') - 1; }); // => true
+
+model('arr').some(function() { return false; }); // => false
+
+model('arr').filter(function() { return this('a') === 1; }); // => [{a:1,b:2}]
+
+
+
+// Event delegation
+model('arr').on('change', function(prop) {
+  log.unshift(prop + ' changed to ' + this(prop));
+});
+
+model('arr')(0, 42);
+log[0]; // => '0 changed to 42'
+
+model('arr')(2, 128);
+log[0]; // => '2 changed to 128'
 
 ```
 
