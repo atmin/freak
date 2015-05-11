@@ -242,11 +242,11 @@ model('arr')(0, 1);
 
 model('arr').push(42);
 model('arr').values; // => [1, 3, 42]
-log[1]; // => '1 element(s) inserted at 2'
+log[0]; // => '1 element(s) inserted at 2'
 
 model('arr').pop();
 model('arr').values; // => [1, 3]
-log[1]; // => '1 element(s) deleted from 2'
+log[0]; // => '1 element(s) deleted from 2'
 
 model('arr').reverse();
 model('arr').values; // => [3, 1]
@@ -255,11 +255,11 @@ log[0]; // => '2 element(s) inserted at 0'
 
 model('arr').shift();
 model('arr').values; // => [1]
-log[1]; // => '1 element(s) deleted from 0'
+log[0]; // => '1 element(s) deleted from 0'
 
 model('arr').unshift(42);
 model('arr').values; // => [42, 1]
-log[1]; // => '1 element(s) inserted at 0'
+log[0]; // => '1 element(s) inserted at 0'
 
 model('arr').sort();
 model('arr').values; // => [1, 42]
