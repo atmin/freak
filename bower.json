@@ -1,7 +1,7 @@
 {
   "name": "freak",
   "main": "freak.js",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "homepage": "https://github.com/atmin/freak",
   "authors": [
     "Atanas Minev <fr33rider@gmail.com>"
