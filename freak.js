@@ -2,37 +2,17 @@
 
 function freak(obj, root, parent, prop) {
 
-  var listeners = {
-    'change': [],
-    'update': [],
-    'insert': [],
-    'delete': []
-  };
-  var registeredListeners = {
-    'change': [],
-    'update': [],
-    'insert': [],
-    'delete': []
-  };
-  //var registeredListeners = Object.create(listeners);
-  var _dependentProps = {};
-  var _dependentContexts = {};
+  var listeners = {'change': [], 'update': [], 'insert': [], 'delete': []};
+  var registeredListeners = {'change': [], 'update': [], 'insert': [], 'delete': []};
+  var deps = {};
   var cache = {};
   var children = {};
 
-  // Assert condition
-  function assert(cond, msg) {
-    if (!cond) {
-      throw msg || 'assertion failed';
-    }
-  }
-
   // Mix properties into target
   function mixin(target, properties) {
-    for (var i = 0, props = Object.getOwnPropertyNames(properties), len = props.length;
-        i < len; i++) {
-      target[props[i]] = properties[props[i]];
-    }
+    Object.getOwnPropertyNames(properties).forEach(function(prop) {
+      target[prop] = properties[prop];
+    });
   }
 
   function deepEqual(x, y) {
@@ -83,10 +63,10 @@ function freak(obj, root, parent, prop) {
           arguments[2] : null;
 
     // Args check
-    assert(
+    if (!(
       (event === 'change') ||
       (['insert', 'delete', 'update'].indexOf(event) > -1 && prop === null)
-    );
+    )) throw('invalid arguments');
 
     // Already registered?
     if (registeredListeners[event].indexOf(callback) === -1) {
@@ -94,9 +74,7 @@ function freak(obj, root, parent, prop) {
       listeners[event].push(
         (event === 'change' && prop !== null) ?
           // on('change', 'prop', function() { ... })
-          function(_prop) {
-            if (_prop === prop) callback.call(instance);
-          } :
+          function(_prop) { if (_prop === prop) callback.call(instance) } :
           callback
       );
     }
@@ -133,11 +111,9 @@ function freak(obj, root, parent, prop) {
   // trigger('update', prop)
   // trigger('insert' or 'delete', index, count)
   function trigger(event, a, b) {
-    var handlers = listeners[event] || [];
-    var i, len = handlers.length;
-    for (i = 0; i < len; i++) {
-      handlers[i].call(instance, a, b);
-    }
+    (listeners[event] || []).forEach(function(handler) {
+      handler.call(instance, a, b);
+    });
   }
 
   // Export model to JSON string
@@ -160,60 +136,39 @@ function freak(obj, root, parent, prop) {
     return JSON.stringify(filter(obj));
   }
 
-  // Load model from JSON string or object
-  function fromJSON(data) {
-    var key;
-    if (typeof data === 'string') {
-      data = JSON.parse(data);
-    }
-    for (key in data) {
-      instance(key, data[key]);
-      trigger('update', key);
-    }
-    instance.len = obj.length;
-  }
-
-  // Update handler: recalculate dependent properties,
-  // trigger change if necessary
+  // Update handler
   function update(prop) {
-    if (!deepEqual(cache[prop], get(prop, function() {}, true))) {
+    // trigger change if necessary
+    if (!deepEqual(cache[prop], _get(prop, true))) {
       trigger('change', prop);
     }
-
     // Notify dependents
-    for (var i = 0, dep = _dependentProps[prop] || [], len = dep.length;
-        i < len; i++) {
-      delete children[dep[i]];
-      _dependentContexts[prop][i].trigger('update', dep[i]);
-    }
-
+    (deps[prop] || []).forEach(function(dep) {
+      delete children[dep[0]];
+      dep[1].trigger('update', dep[0]);
+    });
+    // Notify computed properties, depending on parent object
     if (instance.parent) {
-      // Notify computed properties, depending on parent object
       instance.parent.trigger('update', instance.prop);
     }
   }
 
-  // Proxy the accessor function to record
-  // all accessed properties
+  // Proxy the accessor function to record all accessed properties
   function getDependencyTracker(prop) {
     function tracker(context) {
       return function(_prop, _arg) {
-        if (!context._dependentProps[_prop]) {
-          context._dependentProps[_prop] = [];
-          context._dependentContexts[_prop] = [];
-        }
-        if (context._dependentProps[_prop].indexOf(prop) === -1) {
-          context._dependentProps[_prop].push(prop);
-          context._dependentContexts[_prop].push(instance);
+        context.deps[_prop] = context.deps[_prop] || [];
+        if (!context.deps[_prop].reduce(function found(prev, curr) {
+              return prev || (curr[0] === prop);
+            }, false)) {
+          context.deps[_prop].push([prop, instance]);
         }
         return context(_prop, _arg, true);
       }
     }
     var result = tracker(instance);
     construct(result);
-    if (parent) {
-      result.parent = tracker(parent);
-    }
+    result.parent = parent ? tracker(parent) : null;
     result.root = tracker(root || instance);
     return result;
   }
@@ -235,12 +190,12 @@ function freak(obj, root, parent, prop) {
 
   // Getter for prop, if callback is given
   // can return async value
-  function get(prop, callback, skipCaching) {
+  function _get(prop, skipCaching) {
     var val = obj[prop];
     if (typeof val === 'function') {
-      val = val.call(getDependencyTracker(prop), callback);
+      val = val.call(getDependencyTracker(prop));
       if (!skipCaching) {
-        cache[prop] = (val === undefined) ? val : shallowClone(val);
+        cache[prop] = shallowClone(val);
       }
     }
     else if (!skipCaching) {
@@ -249,8 +204,8 @@ function freak(obj, root, parent, prop) {
     return val;
   }
 
-  function getter(prop, callback, skipCaching) {
-    var result = get(prop, callback, skipCaching);
+  function getter(prop, skipCaching) {
+    var result = _get(prop, skipCaching);
 
     return result && typeof result === 'object' ?
       // Wrap object
@@ -263,7 +218,7 @@ function freak(obj, root, parent, prop) {
 
   // Set prop to val
   function setter(prop, val) {
-    var oldVal = get(prop);
+    var oldVal = _get(prop);
 
     if (typeof obj[prop] === 'function') {
       // Computed property setter
@@ -285,10 +240,7 @@ function freak(obj, root, parent, prop) {
 
   // Functional accessor, unify getter and setter
   function accessor(prop, arg, skipCaching) {
-    return (
-      (arg === undefined || typeof arg === 'function') ?
-        getter : setter
-    )(prop, arg, skipCaching);
+    return (arg === undefined) ? getter(prop, skipCaching) : setter(prop, arg);
   }
 
   // Attach instance members
@@ -305,12 +257,8 @@ function freak(obj, root, parent, prop) {
       // .trigger(event[, prop])
       trigger: trigger,
       toJSON: toJSON,
-      // Deprecated. It has always been broken, anyway
-      // Will think how to implement properly
-      fromJSON: fromJSON,
-      // Internal: dependency tracking
-      _dependentProps: _dependentProps,
-      _dependentContexts: _dependentContexts
+      // internal: dependency tracking
+      deps: deps
     });
 
     // Wrap mutating array method to update
@@ -386,8 +334,7 @@ function freak(obj, root, parent, prop) {
 
       });
 
-      [
-        'forEach', 'every', 'some', 'filter', 'find', 'findIndex',
+      [ 'forEach', 'every', 'some', 'filter', 'find', 'findIndex',
         'keys', 'map', 'reduce', 'reduceRight'
       ].forEach(function(method) {
         target[method] = proxyArrayMethod(method);
@@ -398,9 +345,7 @@ function freak(obj, root, parent, prop) {
   on('update', update);
 
   // Create freak instance
-  var instance = function() {
-    return accessor.apply(null, arguments);
-  };
+  var instance = accessor.bind(null);
 
   // Attach instance members
   construct(instance);

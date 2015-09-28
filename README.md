@@ -95,14 +95,6 @@ var obj = {
     }
   },
 
-  // Asynchronous computed property
-  async: function(callback) {
-    setTimeout(function() {
-      var answer = 42;
-      callback(answer);
-    }, 0);
-  },
-
   // Computed property setter
   setab: function(val) {
     this('a', val);
@@ -188,11 +180,6 @@ model('sum'); // => 4
 
 // Array length is the `len` property, because Function.length already exists
 model('arr').len; // => 2
-
-// Get computed property asynchronously
-model('async', function(val) {
-  val; // => 42
-});
 
 // Computed properties can be setters
 model('setab', 10);
@@ -416,19 +403,18 @@ model = freak({
   // "Toggle All" functionality, when all are checked,
   // `toggleAll` state is checked; setting it affects all checkboxes
   toggleAll: function(newValue) {
-    if (typeof newValue === 'boolean') {
-      // Setter
-      this('checkboxes').values.map(function(val, i) {
-        this('checkboxes')(i, newValue);
-      }, this);
-    }
-    else {
+    if (newValue === undefined) {
       // Getter
-      // (typeof newValue === 'function' in this case, callback for async call)
       return this('checkboxes').values.reduce(function(prev, curr) {
         // Logical 'and' of all values
         return prev && curr;
       }, true);
+    }
+    else {
+      // Setter
+      this('checkboxes').values.map(function(val, i) {
+        this('checkboxes')(i, newValue);
+      }, this);
     }
   }
 });
@@ -486,14 +472,7 @@ model = freak({
   arr: [{a: 6}, {a: 7, _: 'nothing'}]
 });
 model('c'); // => 3
-var exported = model.toJSON(); // => '{"a":1,"b":[2,2],"obj":{"a":22},"arr":[{"a":6},{"a",7}]}'
-exported = JSON.parse(exported);
-exported.a = 40;
-model.fromJSON(exported);
-model('c'); // => 42
-exported.a = 20;
-model.fromJSON(JSON.stringify(exported));
-model('c'); // => 22
+model.toJSON(); // => '{"a":1,"b":[2,2],"obj":{"a":22},"arr":[{"a":6},{"a":7}]}'
 
 
 // Cousin dependencies
@@ -549,6 +528,10 @@ log[0]; // => '0 changed to 42'
 
 model('arr')(2, 128);
 log[0]; // => '2 changed to 128'
+
+
+
+// Expression
 
 ```
 
