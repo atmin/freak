@@ -22,8 +22,8 @@ access other properties via the `this` accessor function, which serves
 as the [destiny
 operator](http://paulstovell.com/blog/reactive-programming)
 
-- each property is observable: `model.on('change', 'foo', function...)`
-(including arrays: `model('arr').on('insert', function...)`)
+- each property is observable: `model.on('change', function(prop)...)`
+(including arrays: `model('arr').on('insert', function(index, count)...)`)
 
 It's an alternative to [Object.observe](http://updates.html5rocks.com/2012/11/Respond-to-change-with-Object-observe)
 with extra features.
@@ -124,8 +124,8 @@ Implement simple event log and attach some event handlers to model.
 var log = [];
 
 // Track property change
-model.on('change', 'f', function() {
-  log.unshift('f = ' + this('f'));
+model.on('change', function(prop) {
+  if (prop === 'f') log.unshift('f = ' + this('f'));
 });
 
 // On array insert
@@ -139,8 +139,8 @@ model('arr').on('delete', function(index, count) {
 });
 
 // On first array element change
-model('arr').on('change', 0, function() {
-  log.unshift('arr[0] = ' + this(0));
+model('arr').on('change', function(prop) {
+  if (prop === 0) log.unshift('arr[0] = ' + this(0));
 });
 ```
 
@@ -200,14 +200,15 @@ model.prop; // => null
 
 // Inter-context computed properties
 model('nestedObj')('parentArrayLength'); // => 2
-model('nestedObj').on('change', 'parentArrayLength', function() {
-  log.unshift('nestedObj.parentArrayLength = ' + model('nestedObj')('parentArrayLength'));
+model('nestedObj').on('change', function(prop) {
+  if (prop === 'parentArrayLength')
+    log.unshift('nestedObj.parentArrayLength = ' + model('nestedObj')('parentArrayLength'));
 });
 model('arr').push(42);
 log[0]; // => 'nestedObj.parentArrayLength = 3'
 model('arr').pop();
 log[0]; // => 'nestedObj.parentArrayLength = 2'
-model('nestedObj').off('change', 'parentArrayLength');
+model('nestedObj').off('change');
 
 
 
@@ -276,8 +277,8 @@ model = freak({
     return this('a').values.reduce(function(a,b) { return a + b });
   }
 });
-model.on('change', 's', function() {
-  log.unshift('s=' + this('s'));
+model.on('change', function(prop) {
+  if (prop === 's') log.unshift('s=' + this('s'));
 });
 model('s'); // init dependency tracking
 model('a')(0, 2);
@@ -291,8 +292,8 @@ model = freak({
     return this('a').values.reduce(function(a,b) { return { b: a.b + b.b }; }).b;
   }
 });
-model.on('change', 's', function() {
-  log.unshift('s=' + this('s'));
+model.on('change', function(prop) {
+  if (prop === 's') log.unshift('s=' + this('s'));
 });
 model('s'); // init dependency tracking
 model('a')(0)('b', 2);
@@ -310,11 +311,9 @@ model = freak({
     });
   }
 });
-model.on('change', 'a', function() {
-  log.unshift('a = ' + JSON.stringify(this('a').values));
-});
-model.on('change', 'even', function() {
-  log.unshift('even = ' + JSON.stringify(this('even').values));
+model.on('change', function(prop) {
+  if (prop === 'a' || prop === 'even')
+    log.unshift(prop + ' = ' + JSON.stringify(this(prop).values));
 });
 model('a').on('insert', function() {
   log.unshift('insert into a');
@@ -354,14 +353,9 @@ model = freak({
   }
 });
 
-model.on('change', 'a', function() {
-  log.unshift('a = ' + JSON.stringify(this('a').values));
-});
-model.on('change', 'even', function() {
-  log.unshift('even = ' + JSON.stringify(this('even').values));
-});
-model.on('change', 'evenLength', function() {
-  log.unshift('evenLength = ' + this('evenLength'));
+model.on('change', function(prop) {
+  var val = this(prop);
+  log.unshift(prop + ' = ' + (typeof val === 'function' ? JSON.stringify(val.values) : val));
 });
 model('a').on('insert', function() {
   log.unshift('insert into a');
@@ -456,7 +450,7 @@ model('toggleAll', false);
 JSON.stringify(model('checkboxes').values); // => '[{"checked":false},{"checked":false}]'
 
 
-// Serialization / deserialization tests
+// Serialization test
 
 model = freak({
   a: 1,
@@ -486,8 +480,8 @@ model = freak({
     a: [22]
   }
 });
-model(1).on('change', 'a', function() {
-  log.unshift('a=' + this('a'));
+model(1).on('change', function(prop) {
+  if (prop === 'a') log.unshift('a=' + this('a'));
 });
 model(1)('a'); // => 22
 model(2)('a')(0, 42);
