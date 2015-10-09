@@ -15,33 +15,11 @@ function freak(obj, root, parent, prop) {
   }
 
   function deepEqual(x, y) {
-    if (typeof x === "object" && x !== null &&
-        typeof y === "object" && y !== null) {
-
-      if (Object.keys(x).length !== Object.keys(y).length) {
-        return false;
-      }
-
-      for (var prop in x) {
-        if (x.hasOwnProperty(prop)) {
-          if (y.hasOwnProperty(prop)) {
-            if (!deepEqual(x[prop], y[prop])) {
-              return false;
-            }
-          }
-          else {
-            return false;
-          }
-        }
-      }
-
-      return true;
-    }
-    else if (x !== y) {
-      return false;
-    }
-
-    return true;
+    return (x && y && typeof x === 'object' && typeof y === 'object') ?
+      (Object.keys(x).length === Object.keys(y).length) &&
+        Object.keys(x).reduce(function(isEqual, key) {
+          return isEqual && deepEqual(x[key], y[key]);
+        }, true) : (x === y);
   }
 
   // Event functions
@@ -215,7 +193,7 @@ function freak(obj, root, parent, prop) {
           obj,
           callback ?
             [function(el, i) {
-              return callback.apply(target(i), arguments);
+              return callback.apply(target(i), [].slice.call(arguments));
             }].concat([].slice.call(arguments, 1)) :
             arguments
         );

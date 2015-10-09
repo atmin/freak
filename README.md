@@ -22,14 +22,24 @@ access other properties via the `this` accessor function, which serves
 as the [destiny
 operator](http://paulstovell.com/blog/reactive-programming)
 
-- each property is observable: `model.on('change', function(prop)...)`
-(including arrays: `model('arr').on('insert', function(index, count)...)`)
+- each property is observable, `model.on('change', function(prop)...)`,
+including arrays
 
 It's an alternative to [Object.observe](http://updates.html5rocks.com/2012/11/Respond-to-change-with-Object-observe)
-with extra features.
+that also provides observable computed properties with automatic dependency management.
 
-The only concept you have to grasp is: you give up the assignment operator
+The only concept introduced is: you give up the assignment operator
 in favour of the accessor function.
+
+Traditional object member access:
+
+    var value = this.member;    // getter
+    this.member = 3.14;         // setter
+
+Freak style:
+
+    var value = this('member'); // getter
+    this('member', 3.14);       // setter
 
 
 > According to Backus (and many other people), the problem with assignment statements is
@@ -51,16 +61,17 @@ in favour of the accessor function.
 Specification
 -------------
 
-Tests are processed by [jsmd](https://github.com/vesln/jsmd)
+Following literate embedded tests are processed by [jsmd](https://github.com/vesln/jsmd)
 
 <!-- js
+// hidden setup
 var freak = require('./freak.js');
 -->
 
 
 ### Example object
 
-Illustrates all capabilities. `this` is the accessor function of
+To illustrate most capabilities. `this` is the accessor function of
 current context.
 
 ```js
@@ -81,7 +92,7 @@ var obj = {
 
   // Computed property, array aggregation
   sum: function() {
-    return this('arr').values.reduce(function(prev, curr) {
+    return this('arr').reduce(function(prev, curr) {
       return prev + curr;
     });
   },
@@ -144,7 +155,7 @@ model('arr').on('change', function(prop) {
 });
 ```
 
-### Literate tests
+### Property access
 
 ``` js
 // Get property
@@ -171,7 +182,11 @@ model('arr').values; // => [1, 2, 3]
 
 // Computed properties work for arrays, too
 model('sum'); // => 6
+```
 
+### Mutating array methods
+
+``` js
 // Arrays can mutate
 model('arr').splice(1, 1);
 model('arr').values; // => [1, 3]
@@ -274,7 +289,7 @@ model('a'); // => null
 model = freak({
   a: [1, 2, 3],
   s: function() {
-    return this('a').values.reduce(function(a,b) { return a + b });
+    return this('a').reduce(function(a,b) { return a + b });
   }
 });
 model.on('change', function(prop) {
@@ -289,7 +304,7 @@ log[0]; // => 's=10'
 model = freak({
   a: [{b: 1}, {b: 2}, {b: 3}],
   s: function() {
-    return this('a').values.reduce(function(a,b) { return { b: a.b + b.b }; }).b;
+    return this('a').reduce(function(a,b) { return { b: a.b + b.b }; }).b;
   }
 });
 model.on('change', function(prop) {
@@ -306,7 +321,7 @@ log[0]; // => 's=10'
 model = freak({
   a: [1, 2, 3, 4],
   even: function() {
-    return this('a').values.filter(function(el) {
+    return this('a').filter(function(el) {
       return el % 2 === 0;
     });
   }
@@ -344,7 +359,7 @@ log[0]; // => 'even = [2,4,6]'
 model = freak({
   a: [{b: 1}, {b: 2}, {b: 3}, {b: 4}],
   even: function() {
-    return this('a').values.filter(function(el) {
+    return this('a').filter(function(el) {
       return el.b % 2 === 0;
     });
   },
@@ -397,19 +412,17 @@ model = freak({
   // "Toggle All" functionality, when all are checked,
   // `toggleAll` state is checked; setting it affects all checkboxes
   toggleAll: function(newValue) {
-    if (newValue === undefined) {
+    var checkboxes = this('checkboxes');
+    return newValue === undefined ?
       // Getter
-      return this('checkboxes').values.reduce(function(prev, curr) {
+      checkboxes.reduce(function(prev, curr) {
         // Logical 'and' of all values
         return prev && curr;
-      }, true);
-    }
-    else {
+      }) :
       // Setter
-      this('checkboxes').values.map(function(val, i) {
-        this('checkboxes')(i, newValue);
-      }, this);
-    }
+      checkboxes.forEach(function(val, i) {
+        checkboxes(i, newValue);
+      });
   }
 });
 
@@ -426,20 +439,17 @@ model = freak({
   checkboxes: [{ checked: true }, { checked: false }],
 
   toggleAll: function(newValue) {
-    if (typeof newValue === 'boolean') {
-      // Setter
-      this('checkboxes').values.map(function(val, i) {
-        this('checkboxes')(i)('checked', newValue);
-      }, this);
-    }
-    else {
+    var checkboxes = this('checkboxes');
+    return newValue === undefined ?
       // Getter
-      // (typeof newValue === 'function' in this case, callback for async call)
-      return this('checkboxes').values.reduce(function(prev, curr) {
-        // Logical 'and' of all checked field values
+      checkboxes.reduce(function(prev, curr) {
+        // Logical 'and' of all values
         return prev && curr.checked;
-      }, true);
-    }
+      }) :
+      // Setter
+      checkboxes.forEach(function(val, i) {
+        checkboxes(i)('checked', newValue);
+      });
   }
 });
 
