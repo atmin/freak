@@ -200,7 +200,7 @@ model.parent; // => null
 ```
 
 All contexts, but root have a property name, `prop`
-(`name` is existing read- function property name)
+(`name` is existing read-only function property name)
 
 ``` js
 model('nestedObj').prop; // => 'nestedObj'
