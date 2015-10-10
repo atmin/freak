@@ -283,7 +283,56 @@ log[1]; // => '2 element(s) deleted from 0'
 log[0]; // => '2 element(s) inserted at 0'
 ```
 
-More tests
+`forEach`, `every`, `some`, `filter`, `find`, `findIndex`,
+`keys`, `map`, `reduce`, `reduceRight`
+
+```js
+model = freak({
+  arr: [{a: 1}, {a: 2}, {a: 3}]
+});
+
+model('arr').forEach(function() { this('b', this('a') + 1); });
+
+model('arr').map(function() { return this('b'); }); // => [2, 3, 4]
+
+model('arr').every(function() { return this('a'); }); // => true
+
+model('arr').every(function() { return this('a') - 1; }); // => false
+
+model('arr').some(function() { return this('a') - 1; }); // => true
+
+model('arr').some(function() { return false; }); // => false
+
+model('arr').filter(function() { return this('a') === 1; }); // => [{a:1,b:2}]
+```
+
+
+
+### Serialization test
+
+```js
+model = freak({
+  a: 1,
+  b: [2, 2],
+  c: function() {
+    return this('a') + this('b')(0);
+  },
+  _d: 'not serialized',
+  obj: {
+    a: 22,
+    _d: 'not serialized, as well'
+  },
+  arr: [{a: 6}, {a: 7, _: 'nothing'}]
+});
+model('c'); // => 3
+model.toJSON(); // => '{"a":1,"b":[2,2],"obj":{"a":22},"arr":[{"a":6},{"a":7}]}'
+```
+
+
+### More tests
+
+
+Proper `.values` references
 
 ```js
 model = freak({a: [[1]]});
@@ -295,11 +344,12 @@ model('a', {c: 42});
 model('a').values.c === 42; // => true
 model('a', null);
 model('a'); // => null
+```
 
+Computed properties, depending on array,
+are notified when element changes
 
-// Computed properties, depending on array,
-// are notified when element changes
-
+```js
 model = freak({
   a: [1, 2, 3],
   s: function() {
@@ -329,9 +379,11 @@ model('a')(0)('b', 2);
 log[0]; // => 's=7'
 model('a').push({b: 3});
 log[0]; // => 's=10'
+```
 
+Computed properties returning object/array
 
-// Computed properties returning object/array
+```js
 model = freak({
   a: [1, 2, 3, 4],
   even: function() {
@@ -367,9 +419,11 @@ log[0]; // => 'insert into a'
 // Now it should change, as we push even element
 model('a').push(6);
 log[0]; // => 'even = [2,4,6]'
+```
 
+Same test again, but for array of objects
 
-// Same test for array of objects
+```js
 model = freak({
   a: [{b: 1}, {b: 2}, {b: 3}, {b: 4}],
   even: function() {
@@ -416,10 +470,11 @@ log[1]; // => 'even = [{"b":2},{"b":4},{"b":6}]'
 model('a')(1)('b', 1);
 log[0]; // => 'evenLength = 2'
 log[1]; // => 'even = [{"b":4},{"b":6}]'
+```
 
+Complex computed getter/setter
 
-// Circular dependency tests
-
+```js
 model = freak({
   checkboxes: [true, false, true, true],
 
@@ -445,10 +500,11 @@ model('checkboxes')(1, true);
 model('toggleAll'); // => true
 model('toggleAll', false);
 model('checkboxes').values; // => [false, false, false, false]
+```
 
+Same tests, but for array of objects
 
-
-// Same tests, but for array of objects
+```js
 model = freak({
   checkboxes: [{ checked: true }, { checked: false }],
 
@@ -472,28 +528,11 @@ model('checkboxes')(1)('checked', true);
 model('toggleAll'); // => true
 model('toggleAll', false);
 JSON.stringify(model('checkboxes').values); // => '[{"checked":false},{"checked":false}]'
+```
 
+Cousin dependencies
 
-// Serialization test
-
-model = freak({
-  a: 1,
-  b: [2, 2],
-  c: function() {
-    return this('a') + this('b')(0);
-  },
-  _d: 'not serialized',
-  obj: {
-    a: 22,
-    _d: 'not serialized, as well'
-  },
-  arr: [{a: 6}, {a: 7, _: 'nothing'}]
-});
-model('c'); // => 3
-model.toJSON(); // => '{"a":1,"b":[2,2],"obj":{"a":22},"arr":[{"a":6},{"a":7}]}'
-
-
-// Cousin dependencies
+```js
 model = freak({
   1: {
     a: function() {
@@ -510,33 +549,12 @@ model(1).on('change', function(prop) {
 model(1)('a'); // => 22
 model(2)('a')(0, 42);
 log[0]; // => 'a=42'
+```
 
+Change event, again
 
-
-// 'forEach', 'every', 'some', 'filter', 'find', 'findIndex',
-// 'keys', 'map', 'reduce', 'reduceRight'
-
-model = freak({
-  arr: [{a: 1}, {a: 2}, {a: 3}]
-});
-
-model('arr').forEach(function() { this('b', this('a') + 1); });
-
-model('arr').map(function() { return this('b'); }); // => [2, 3, 4]
-
-model('arr').every(function() { return this('a'); }); // => true
-
-model('arr').every(function() { return this('a') - 1; }); // => false
-
-model('arr').some(function() { return this('a') - 1; }); // => true
-
-model('arr').some(function() { return false; }); // => false
-
-model('arr').filter(function() { return this('a') === 1; }); // => [{a:1,b:2}]
-
-
-
-// Event delegation
+```js
+model = freak({arr: [1, 1, 1]});
 model('arr').on('change', function(prop) {
   log.unshift(prop + ' changed to ' + this(prop));
 });
