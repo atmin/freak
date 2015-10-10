@@ -182,55 +182,68 @@ model('arr').values; // => [1, 2, 3]
 
 // Computed properties work for arrays, too
 model('sum'); // => 6
-```
-
-### Mutating array methods
-
-``` js
-// Arrays can mutate
-model('arr').splice(1, 1);
-model('arr').values; // => [1, 3]
-log[0]; // => '1 element(s) deleted from 1'
-model('sum'); // => 4
-
-// Array length is the `len` property, because Function.length already exists
-model('arr').len; // => 2
 
 // Computed properties can be setters
 model('setab', 10);
 model('f'); // => 20
+```
 
-// You can access parent and root contexts of nested objects
+### Contexts, computed properties
+
+You can access parent and root contexts of nested objects
+
+``` js
 model('nestedObj').parent === model; // => true
 model('arr').root === model; // => true
 model.root; // => model
 model.parent; // => null
+```
 
-// All contexts, but root have a property name, 'prop'
-// ('name' is existing read- function property name)
+All contexts, but root have a property name, `prop`
+(`name` is existing read- function property name)
+
+``` js
 model('nestedObj').prop; // => 'nestedObj'
 model('arr').prop; // => 'arr'
 model('nestedObj').values === model('nestedObj').parent(model('nestedObj').prop).values; // => true
 model.prop; // => null
+```
 
-// Inter-context computed properties
-model('nestedObj')('parentArrayLength'); // => 2
+Inter-context computed properties
+
+``` js
+model('nestedObj')('parentArrayLength'); // => 3
 model('nestedObj').on('change', function(prop) {
   if (prop === 'parentArrayLength')
     log.unshift('nestedObj.parentArrayLength = ' + model('nestedObj')('parentArrayLength'));
 });
 model('arr').push(42);
-log[0]; // => 'nestedObj.parentArrayLength = 3'
+log[0]; // => 'nestedObj.parentArrayLength = 4'
 model('arr').pop();
-log[0]; // => 'nestedObj.parentArrayLength = 2'
+log[0]; // => 'nestedObj.parentArrayLength = 3'
 model('nestedObj').off('change');
+```
 
+### Array methods
 
+Arrays can mutate
 
+``` js
+model('arr').splice(1, 1);
+model('arr').values; // => [1, 3]
+log[0]; // => '1 element(s) deleted from 1'
+model('sum'); // => 4
+```
 
+Array length is the `len` property, because Function.length already exists
 
-// Mutating array methods tests
+``` js
+model('arr').len; // => 2
+```
 
+Mutating array methods tests
+
+``` js
 // Dummy log entry
 log.unshift('nope');
 
@@ -268,10 +281,11 @@ model('arr').sort();
 model('arr').values; // => [1, 42]
 log[1]; // => '2 element(s) deleted from 0'
 log[0]; // => '2 element(s) inserted at 0'
+```
 
+More tests
 
-// More tests
-
+```js
 model = freak({a: [[1]]});
 model('a').unshift([2]);
 model('a').values[0] === model('a')(0).values; // => true
@@ -532,10 +546,6 @@ log[0]; // => '0 changed to 42'
 
 model('arr')(2, 128);
 log[0]; // => '2 changed to 128'
-
-
-
-// Expression
 
 ```
 
