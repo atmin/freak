@@ -1,10 +1,11 @@
 {
   "name": "freak",
-  "version": "0.5.2",
+  "version": "1.0.0",
   "description": "Functional reactive object wrapper",
   "main": "freak.js",
   "scripts": {
-    "test": "jsmd README.md"
+    "test": "jsmd README.md",
+    "coverage": "npm test && open coverage/index.html"
   },
   "repository": {
     "type": "git",
@@ -15,7 +16,9 @@
     "reactive",
     "object",
     "wrapper",
-    "observe"
+    "observe",
+    "computed",
+    "properties"
   ],
   "author": "Atanas Minev",
   "license": "MIT",
@@ -24,6 +27,7 @@
   },
   "homepage": "https://github.com/atmin/freak",
   "devDependencies": {
+    "istanbul": "^0.3.22",
     "jsmd": "^0.3.1"
   }
 }

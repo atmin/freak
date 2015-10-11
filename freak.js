@@ -2,293 +2,149 @@
 
 function freak(obj, root, parent, prop) {
 
-  var listeners = {
-    'change': [],
-    'update': [],
-    'insert': [],
-    'delete': []
-  };
-  var registeredListeners = {
-    'change': [],
-    'update': [],
-    'insert': [],
-    'delete': []
-  };
-  //var registeredListeners = Object.create(listeners);
-  var _dependentProps = {};
-  var _dependentContexts = {};
+  var listeners = {'change': [], 'update': [], 'insert': [], 'delete': []};
+  var deps = {};
   var cache = {};
   var children = {};
 
-  // Assert condition
-  function assert(cond, msg) {
-    if (!cond) {
-      throw msg || 'assertion failed';
-    }
-  }
-
   // Mix properties into target
   function mixin(target, properties) {
-    for (var i = 0, props = Object.getOwnPropertyNames(properties), len = props.length;
-        i < len; i++) {
-      target[props[i]] = properties[props[i]];
-    }
+    Object.keys(properties).forEach(function(prop) {
+      target[prop] = properties[prop];
+    });
   }
 
   function deepEqual(x, y) {
-    if (typeof x === "object" && x !== null &&
-        typeof y === "object" && y !== null) {
-
-      if (Object.keys(x).length !== Object.keys(y).length) {
-        return false;
-      }
-
-      for (var prop in x) {
-        if (x.hasOwnProperty(prop)) {
-          if (y.hasOwnProperty(prop)) {
-            if (!deepEqual(x[prop], y[prop])) {
-              return false;
-            }
-          }
-          else {
-            return false;
-          }
-        }
-      }
-
-      return true;
-    }
-    else if (x !== y) {
-      return false;
-    }
-
-    return true;
+    return (x && y && typeof x === 'object' && typeof y === 'object') ?
+      (Object.keys(x).length === Object.keys(y).length) &&
+        Object.keys(x).reduce(function(isEqual, key) {
+          return isEqual && deepEqual(x[key], y[key]);
+        }, true) : (x === y);
   }
 
   // Event functions
 
   // on('change', function(prop) { ... })
-  // on('change', 'prop', function() { ... })
   // on('update', function(prop) { ... })
   // on('insert', function(index, count) { ... })
   // on('delete', function(index, count) { ... })
-  function on() {
-    var event = arguments[0];
-    var prop = ['string', 'number'].indexOf(typeof arguments[1]) > -1 ?
-      arguments[1] : null;
-    var callback =
-      typeof arguments[1] === 'function' ?
-        arguments[1] :
-        typeof arguments[2] === 'function' ?
-          arguments[2] : null;
-
-    // Args check
-    assert(
-      (event === 'change') ||
-      (['insert', 'delete', 'update'].indexOf(event) > -1 && prop === null)
-    );
-
-    // Already registered?
-    if (registeredListeners[event].indexOf(callback) === -1) {
-      registeredListeners[event].push(callback);
-      listeners[event].push(
-        (event === 'change' && prop !== null) ?
-          // on('change', 'prop', function() { ... })
-          function(_prop) {
-            if (_prop === prop) callback.call(instance);
-          } :
-          callback
-      );
-    }
+  function on(event, callback) {
+    listeners[event].push(callback);
   }
 
   // Remove all or specified listeners given event and property
-  function off() {
-    var event = arguments[0];
-    var prop = typeof arguments[1] === 'string' ? arguments[1] : null;
-    var callback =
-      typeof arguments[1] === 'function' ?
-        arguments[1] :
-        typeof arguments[2] === 'function' ?
-          arguments[2] : null;
-    var i;
-
-    // Remove all property watchers?
-    if (!callback) {
-      registeredListeners[event] = [];
-      listeners[event] = [];
+  function off(event, callback) {
+    if (callback) {
+      listeners[event].splice(listeners[event].indexOf(callback), 1);
     }
     else {
-      // Remove specific callback
-      i = registeredListeners[event].indexOf(callback);
-      if (i > -1) {
-        registeredListeners[event].splice(i, 1);
-        listeners[event].splice(i, 1);
-      }
+      listeners[event] = [];
     }
-
   }
 
-  // trigger('change', prop)
-  // trigger('update', prop)
+  // trigger('change' or 'update', prop)
   // trigger('insert' or 'delete', index, count)
   function trigger(event, a, b) {
-    var handlers = listeners[event] || [];
-    var i, len = handlers.length;
-    for (i = 0; i < len; i++) {
-      handlers[i].call(instance, a, b);
-    }
+    listeners[event].forEach(function(handler) {
+      handler.call(instance, a, b);
+    });
   }
 
-  // Export model to JSON string
-  // NOT exported:
+  // Export model to JSON string. Not exported:
   // - properties starting with _ (Python private properties convention)
   // - computed properties (derived from normal properties)
   function toJSON() {
     function filter(obj) {
-      var key, filtered = Array.isArray(obj) ? [] : {};
-      for (key in obj) {
-        if (typeof obj[key] === 'object') {
-          filtered[key] = filter(obj[key]);
-        }
-        else if (typeof obj[key] !== 'function' && key[0] !== '_') {
-          filtered[key] = obj[key];
-        }
-      }
-      return filtered;
+      return Object.keys(obj)
+        .filter(function(key) {
+          return typeof obj[key] !== 'function' && key[0] !== '_';
+        })
+        .reduce(function(clone, key) {
+          clone[key] = typeof obj[key] !== 'object' ?
+            obj[key] : filter(obj[key]);
+          return clone;
+        }, Array.isArray(obj) ? [] : {});
     }
     return JSON.stringify(filter(obj));
   }
 
-  // Load model from JSON string or object
-  function fromJSON(data) {
-    var key;
-    if (typeof data === 'string') {
-      data = JSON.parse(data);
-    }
-    for (key in data) {
-      instance(key, data[key]);
-      trigger('update', key);
-    }
-    instance.len = obj.length;
-  }
-
-  // Update handler: recalculate dependent properties,
-  // trigger change if necessary
+  // Update handler
   function update(prop) {
-    if (!deepEqual(cache[prop], get(prop, function() {}, true))) {
+    // trigger change if necessary
+    if (!deepEqual(cache[prop], _get(prop))) {
       trigger('change', prop);
     }
-
     // Notify dependents
-    for (var i = 0, dep = _dependentProps[prop] || [], len = dep.length;
-        i < len; i++) {
-      delete children[dep[i]];
-      _dependentContexts[prop][i].trigger('update', dep[i]);
-    }
-
+    (deps[prop] || []).forEach(function(dep) {
+      delete children[dep[0]];
+      dep[1].trigger('update', dep[0]);
+    });
+    // Notify computed properties, depending on parent object
     if (instance.parent) {
-      // Notify computed properties, depending on parent object
       instance.parent.trigger('update', instance.prop);
     }
   }
 
-  // Proxy the accessor function to record
-  // all accessed properties
-  function getDependencyTracker(prop) {
-    function tracker(context) {
+  // Proxy the accessor function to record all accessed properties
+  function tracker(prop) {
+    function _tracker(context) {
       return function(_prop, _arg) {
-        if (!context._dependentProps[_prop]) {
-          context._dependentProps[_prop] = [];
-          context._dependentContexts[_prop] = [];
-        }
-        if (context._dependentProps[_prop].indexOf(prop) === -1) {
-          context._dependentProps[_prop].push(prop);
-          context._dependentContexts[_prop].push(instance);
+        context.deps[_prop] = context.deps[_prop] || [];
+        if (!context.deps[_prop].reduce(function found(prev, curr) {
+              return prev || (curr[0] === prop);
+            }, false)) {
+          context.deps[_prop].push([prop, instance]);
         }
         return context(_prop, _arg, true);
       }
     }
-    var result = tracker(instance);
+    var result = _tracker(instance);
     construct(result);
-    if (parent) {
-      result.parent = tracker(parent);
-    }
-    result.root = tracker(root || instance);
+    result.parent = parent ? _tracker(parent) : null;
+    result.root = _tracker(root || instance);
     return result;
   }
 
-  // Shallow clone an object
-  function shallowClone(obj) {
-    var key, clone;
-    if (obj && typeof obj === 'object') {
-      clone = {};
-      for (key in obj) {
-        clone[key] = obj[key];
-      }
-    }
-    else {
-      clone = obj;
-    }
-    return clone;
-  }
-
-  // Getter for prop, if callback is given
-  // can return async value
-  function get(prop, callback, skipCaching) {
+  // Getter for prop
+  function _get(prop) {
     var val = obj[prop];
-    if (typeof val === 'function') {
-      val = val.call(getDependencyTracker(prop), callback);
-      if (!skipCaching) {
-        cache[prop] = (val === undefined) ? val : shallowClone(val);
-      }
-    }
-    else if (!skipCaching) {
-      cache[prop] = val;
-    }
-    return val;
+    return cache[prop] = (typeof val === 'function') ?
+      val.call(tracker(prop)) : val;
   }
 
-  function getter(prop, callback, skipCaching) {
-    var result = get(prop, callback, skipCaching);
-
-    return result && typeof result === 'object' ?
+  function getter(prop) {
+    var val = _get(prop);
+    return val && typeof val === 'object' ?
       // Wrap object
       children[prop] ?
         children[prop] :
-        children[prop] = freak(result, root || instance, instance, prop) :
+        children[prop] = freak(val, root || instance, instance, prop) :
       // Simple value
-      result;
+      val;
   }
 
   // Set prop to val
   function setter(prop, val) {
-    var oldVal = get(prop);
+    var oldVal = _get(prop);
 
     if (typeof obj[prop] === 'function') {
       // Computed property setter
-      obj[prop].call(getDependencyTracker(prop), val);
+      obj[prop].call(tracker(prop), val);
     }
     else {
       // Simple property
       obj[prop] = val;
-      if (val && typeof val === 'object') {
-        delete cache[prop];
-        delete children[prop];
-      }
     }
 
-    if (oldVal !== val) {
-      trigger('update', prop);
-    }
+    delete cache[prop];
+    delete children[prop];
+
+    return (oldVal !== val) && trigger('update', prop);
   }
 
   // Functional accessor, unify getter and setter
-  function accessor(prop, arg, skipCaching) {
-    return (
-      (arg === undefined || typeof arg === 'function') ?
-        getter : setter
-    )(prop, arg, skipCaching);
+  function accessor(prop, arg) {
+    return (arg === undefined) ? getter(prop) : setter(prop, arg);
   }
 
   // Attach instance members
@@ -305,12 +161,8 @@ function freak(obj, root, parent, prop) {
       // .trigger(event[, prop])
       trigger: trigger,
       toJSON: toJSON,
-      // Deprecated. It has always been broken, anyway
-      // Will think how to implement properly
-      fromJSON: fromJSON,
-      // Internal: dependency tracking
-      _dependentProps: _dependentProps,
-      _dependentContexts: _dependentContexts
+      // internal: dependency tracking
+      deps: deps
     });
 
     // Wrap mutating array method to update
@@ -330,15 +182,12 @@ function freak(obj, root, parent, prop) {
     // Wrap callback of an array method to
     // provide this content to the currently processed item
     function proxyArrayMethod(method) {
-      return function() {
-        var callback = arguments[0];
+      return function(callback) {
         return [][method].apply(
           obj,
-          callback ?
-            [function(el, i) {
-              return callback.apply(target(i), arguments);
-            }].concat([].slice.call(arguments, 1)) :
-            arguments
+          [function(el, i) {
+            return callback.apply(target(i), [].slice.call(arguments));
+          }].concat([].slice.call(arguments, 1))
         );
       };
     }
@@ -386,21 +235,17 @@ function freak(obj, root, parent, prop) {
 
       });
 
-      [
-        'forEach', 'every', 'some', 'filter', 'find', 'findIndex',
-        'keys', 'map', 'reduce', 'reduceRight'
-      ].forEach(function(method) {
-        target[method] = proxyArrayMethod(method);
-      });
+      ['forEach', 'every', 'some', 'filter', 'map', 'reduce', 'reduceRight']
+        .forEach(function(method) {
+          target[method] = proxyArrayMethod(method);
+        });
     }
   }
 
   on('update', update);
 
   // Create freak instance
-  var instance = function() {
-    return accessor.apply(null, arguments);
-  };
+  var instance = accessor.bind(null);
 
   // Attach instance members
   construct(instance);
@@ -408,5 +253,5 @@ function freak(obj, root, parent, prop) {
   return instance;
 }
 
-// CommonJS export
+/* istanbul ignore else */   // CommonJS export
 if (typeof module === 'object') module.exports = freak;
