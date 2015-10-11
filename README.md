@@ -52,8 +52,20 @@ Specification
 Following literate tests are processed by [jsmd](https://github.com/vesln/jsmd)
 
 <!-- js
-// hidden setup
-var freak = require('./freak.js');
+function requireFromString(src, filename) {
+  var Module = module.constructor;
+  var m = new Module();
+  m._compile(src, filename);
+  return m.exports;
+}
+
+var FILENAME = 'freak.js';
+var fs = require('fs');
+var file = fs.readFileSync(FILENAME).toString();
+var istanbul = require('istanbul');
+var instrumenter = new istanbul.Instrumenter();
+var instrumented = instrumenter.instrumentSync(file, FILENAME);
+var freak = requireFromString(instrumented);
 -->
 
 
@@ -555,3 +567,10 @@ log[0]; // => '2 changed to 128'
 
 ```
 
+<!-- js
+var reporter = new istanbul.Reporter();
+var collector = new istanbul.Collector();
+collector.add(__coverage__);
+reporter.addAll(['html', 'text-summary']);
+reporter.write(collector, true, Function.prototype);
+-->

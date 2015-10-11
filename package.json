@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/atmin/freak",
   "devDependencies": {
+    "istanbul": "^0.3.22",
     "jsmd": "^0.3.1"
   }
 }
