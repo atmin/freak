@@ -28,9 +28,6 @@ including arrays
 It's an alternative to [Object.observe](http://updates.html5rocks.com/2012/11/Respond-to-change-with-Object-observe)
 that also provides observable computed properties with automatic dependency management.
 
-The only concept introduced is: you give up the assignment operator
-in favour of the accessor function.
-
 Traditional object member access:
 
     var value = this.member;    // getter
@@ -42,26 +39,17 @@ Freak style:
     this('member', 3.14);       // setter
 
 
-> According to Backus (and many other people), the problem with assignment statements is
-> that they divide the programming language into two distinct worlds:
-> the world of functions and algebra; and the world of assignments.
-> That’s the world on the right-hand side of an assignment statement, and everything else.
->
-> That division stinks for a lot of reasons. Just for a start, it can rob a system of
-> a lot of its clarity; make code far more complex and hard to read; make code
-> far harder to reuse; and make it much harder to build generic code for gluing together
-> computations.
->
->
-> &mdash; [Backus’s Idea of Functional Programming](http://scienceblogs.com/goodmath/2007/03/20/backuss-idea-of-functional-pro-1/)
+### Breaking change in v1.0.0
 
+Async get, `model('asyncProp', callbackFunc)` it not supported anymore. *All* 2 argument calls are handled by
+the setter, allowing defining new computed properties on the fly. If you need async values, use Promise.
 
 
 
 Specification
 -------------
 
-Following literate embedded tests are processed by [jsmd](https://github.com/vesln/jsmd)
+Following literate tests are processed by [jsmd](https://github.com/vesln/jsmd)
 
 <!-- js
 // hidden setup
