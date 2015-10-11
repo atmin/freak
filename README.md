@@ -150,9 +150,10 @@ model('arr').on('delete', function(index, count) {
 });
 
 // On first array element change
-model('arr').on('change', function(prop) {
+var arr0change = function(prop) {
   if (prop === 0) log.unshift('arr[0] = ' + this(0));
-});
+};
+model('arr').on('change', arr0change);
 ```
 
 ### Property access
@@ -253,8 +254,12 @@ log[0]; // => 'nope'
 // Set arr[0] to 2, change event fires, value is new
 model('arr')(0, 2);
 log[0]; // => 'arr[0] = 2'
+// Remove event handler
+model('arr').off('change', arr0change);
 // Back to 1
 model('arr')(0, 1);
+// Change not handled, log unchanged
+log[0]; // => 'arr[0] = 2'
 
 model('arr').push(42);
 model('arr').values; // => [1, 3, 42]
@@ -377,7 +382,7 @@ model.on('change', function(prop) {
 model('s'); // init dependency tracking
 model('a')(0)('b', 2);
 log[0]; // => 's=7'
-model('a').push({b: 3});
+model('a').splice(model('a').len, 0, {b: 3});
 log[0]; // => 's=10'
 ```
 

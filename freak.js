@@ -29,29 +29,23 @@ function freak(obj, root, parent, prop) {
   // on('insert', function(index, count) { ... })
   // on('delete', function(index, count) { ... })
   function on(event, callback) {
-    if ( (['change', 'insert', 'delete', 'update'].indexOf(event) === -1) ||
-         (typeof callback !== 'function') ) throw('invalid arguments');
-    if (listeners[event].indexOf(callback) === -1) listeners[event].push(callback);
+    listeners[event].push(callback);
   }
 
   // Remove all or specified listeners given event and property
   function off(event, callback) {
     if (callback) {
-      // Remove specific callback
-      var i = listeners[event].indexOf(callback);
-      if (i > -1) listeners[event].splice(i, 1);
+      listeners[event].splice(listeners[event].indexOf(callback), 1);
     }
     else {
-      // Remove all property watchers
       listeners[event] = [];
     }
-
   }
 
   // trigger('change' or 'update', prop)
   // trigger('insert' or 'delete', index, count)
   function trigger(event, a, b) {
-    (listeners[event] || []).forEach(function(handler) {
+    listeners[event].forEach(function(handler) {
       handler.call(instance, a, b);
     });
   }
@@ -191,11 +185,9 @@ function freak(obj, root, parent, prop) {
       return function(callback) {
         return [][method].apply(
           obj,
-          callback ?
-            [function(el, i) {
-              return callback.apply(target(i), [].slice.call(arguments));
-            }].concat([].slice.call(arguments, 1)) :
-            arguments
+          [function(el, i) {
+            return callback.apply(target(i), [].slice.call(arguments));
+          }].concat([].slice.call(arguments, 1))
         );
       };
     }
@@ -243,11 +235,10 @@ function freak(obj, root, parent, prop) {
 
       });
 
-      [ 'forEach', 'every', 'some', 'filter', 'find', 'findIndex',
-        'keys', 'map', 'reduce', 'reduceRight'
-      ].forEach(function(method) {
-        target[method] = proxyArrayMethod(method);
-      });
+      ['forEach', 'every', 'some', 'filter', 'map', 'reduce', 'reduceRight']
+        .forEach(function(method) {
+          target[method] = proxyArrayMethod(method);
+        });
     }
   }
 
@@ -262,5 +253,5 @@ function freak(obj, root, parent, prop) {
   return instance;
 }
 
-// CommonJS export
+/* istanbul ignore else */   // CommonJS export
 if (typeof module === 'object') module.exports = freak;
